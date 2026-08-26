@@ -131,8 +131,6 @@ class ClassService(BaseService):
                 limit=filters.page_size
             )
             
-            total = await self.repository.count({'active': filters.active})
-            
             entities = [ModelToEntityMapper.class_(model) for model in models]
             view_models = [EntityToViewModelMapper.class_(entity) for entity in entities]
             

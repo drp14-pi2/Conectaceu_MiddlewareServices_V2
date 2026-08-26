@@ -69,14 +69,14 @@ class LegalRepresentativeService(BaseService):
         try:
             model = await self.repository.get_by_id(representative_id)
             if not model:
-                raise ValueError("Representative not found")
+                raise ValueError("Representante não encontrado")
             
             # Check document uniqueness if being updated
             if dto.document:
                 dto.document = re.sub(r'\D', '', dto.document)
                 exists = await self.repository.document_exists(dto.document, exclude_id=representative_id)
                 if exists:
-                    raise ValueError("Document already registered")
+                    raise ValueError("Documento já registrado")
             
             entity = ModelToEntityMapper.legal_representative(model)
             updated_entity = UpdateMapper.legal_representative(entity, dto)

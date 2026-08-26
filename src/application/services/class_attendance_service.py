@@ -1,5 +1,5 @@
 """Class attendance service - business logic for attendance"""
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 from uuid import UUID
 
@@ -224,7 +224,7 @@ class ClassAttendanceService(BaseService):
         if existing and existing.document_id:
             raise ValueError("Já existe uma justificativa para esta ausência")
         
-        # Create the document first
+        # Create the document
         from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
         
         doc_entity = DtoToEntityMapper.document(document)
