@@ -11,6 +11,7 @@ from src.data.repositories.document_repository import DocumentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.domain.dtos.document_dto import DocumentCreateDTO
 from src.domain.dtos.document_validation_dto import DocumentValidationDTO
@@ -36,7 +37,8 @@ def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
 def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationService:
     """Dependency injection for DocumentValidationService"""
     repository = DocumentValidationRepository(db)
-    return DocumentValidationService(repository)
+    representative_repo = LegalRepresentativeRepository(db)
+    return DocumentValidationService(repository, representative_repo)
 
 
 @router.post("/", response_model=DocumentViewModel, status_code=status.HTTP_201_CREATED)
