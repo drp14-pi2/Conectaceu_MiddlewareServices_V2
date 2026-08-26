@@ -61,25 +61,15 @@ class UserService(BaseService):
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
         try:
-            # ========== Normalize fields ==========
+            # Normalize fields
             dto.document = re.sub(r'\D', '', dto.document)
-
-            if dto.legal_representative_1:
-                dto.legal_representative_1.document = re.sub(r'\D', '', dto.legal_representative_1.document)
-            
-            if dto.legal_representative_2:
-                dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
-
             dto.name = dto.name.title()
             dto.address.street = dto.address.street.title()
             dto.address.neighborhood = dto.address.neighborhood.title()
-
-            # Validate if password are the same
+            
+            # Validate passwords
             if dto.password != dto.confirm_password:
                 raise ValueError("As senhas são diferentes")
-            
-            # ========== Validations ==========
-            # Validate passwords
             self._validate_password(dto.password)
 
             # Hash passwords
@@ -91,18 +81,16 @@ class UserService(BaseService):
             if existing:
                 raise ValueError("Documento pertence a outra pessoa")
             
+            # Check if e-mail already exists
             if dto.email:
                 existing_email = await self.repository.get_by_email(dto.email)
                 if existing_email:
                     raise ValueError("E-mail pertence a outra pessoa")
             
-            if dto.legal_representative_1 and dto.legal_representative_2 and dto.legal_representative_1.document == dto.legal_representative_2.document:
-                raise ValueError("Os representantes legais não podem ser os mesmos")
-            
-            # ========== Determine Creation Path ==========
+            # Determine creation path
             is_public = created_by_user_id is None
             
-            # Validate creator if not public
+            # Validate creator
             if is_public:
                 is_creator_admin_or_secretary = False
             else:
@@ -118,15 +106,7 @@ class UserService(BaseService):
                     raise ValueError("Este usuário não pode criar outros usuários")
                 
                 is_creator_admin_or_secretary = True
-            
-            # ========== Business Rules ==========
-            is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
-
-            # Minors must have legal representative
-            if is_minor and not dto.legal_representative_1:
-                raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
-            
-            # ========== Create User ==========
+            # Create User
             entity = DtoToEntityMapper.user(dto)
             is_creating_student = entity.user_type_id == 5
 
@@ -137,7 +117,9 @@ class UserService(BaseService):
                 entity.student_sequential = await self._get_new_student_sequential()
             
             # Set user status based on creator role
-            if is_creator_admin_or_secretary:
+            is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
+            
+            if is_creator_admin_or_secretary and not is_minor:
                 entity.active = True
             else:
                 entity.active = False
@@ -146,7 +128,6 @@ class UserService(BaseService):
             model = EntityToModelMapper.user(entity)
             saved_model = await self.repository.create(model)
             user_id = UUID(bytes=saved_model.id)
-            user_id_bytes = saved_model.id
             
             # Save password history
             await self.password_history_service.add_password_hash_to_history(
@@ -154,92 +135,11 @@ class UserService(BaseService):
                 hashed_password=entity.password
             )
             
-            # ========== Creates uploaded documents ==========
-            async def _create_document(doc_dto: DocumentCreateDTO, user_id_bytes, legal_rep_id_bytes=None) -> DocumentModel:
-                if len(doc_dto.base64) <= 0:
-                    raise ValueError('Conteúdo do documento não pode ser vazio')
-                id_document_types = [1, 2, 3]
-                if doc_dto.document_type_id in id_document_types and doc_dto.is_front is None:
-                    raise ValueError('Documentos de identidade precisam estar declarados como frente ou verso')
-                doc_entity = DtoToEntityMapper.document(doc_dto)
-                doc_entity.user_id = UUID(bytes=user_id_bytes)
-                if legal_rep_id_bytes:
-                    doc_entity.legal_representative_id = UUID(bytes=legal_rep_id_bytes)
-                doc_model = EntityToModelMapper.document(doc_entity)
-                return await self.document_repo.create(doc_model)
-            
-            created_documents_to_validate = []
-            created_documents_to_validate.append(await _create_document(dto.id_document_front, user_id_bytes))
-            created_documents_to_validate.append(await _create_document(dto.id_document_back, user_id_bytes))
-            created_documents_to_validate.append(await _create_document(dto.user_photo, user_id_bytes))
-            
-            if dto.health_certificate:
-                created_documents_to_validate.append(await _create_document(dto.health_certificate, user_id_bytes))
-
-            # ========== Create legal representatives ==========
-            if is_creating_student:
-                async def _create_legal_representative(rep_dto, student_user_id_bytes):
-                    rep_entity = DtoToEntityMapper.legal_representative(rep_dto)
-                    rep_entity.user_id = UUID(bytes=student_user_id_bytes)
-                    rep_model = EntityToModelMapper.legal_representative(rep_entity)
-                    saved_rep = await self.legal_rep_repo.create(rep_model)
-                    rep_id_bytes = saved_rep.id
-                    
-                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_front, user_id_bytes, rep_id_bytes))
-                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_back, user_id_bytes, rep_id_bytes))
-                    created_documents_to_validate.append(await _create_document(rep_dto.student_registry_authorization, user_id_bytes, rep_id_bytes))
-                    
-                    return saved_rep
-                
-                if dto.legal_representative_1:
-                    await _create_legal_representative(dto.legal_representative_1, user_id_bytes)
-                
-                if dto.legal_representative_2:
-                    await _create_legal_representative(dto.legal_representative_2, user_id_bytes)
-            
-            # ========== Create Document Validations ==========
-            if is_creator_admin_or_secretary:
-                await self._auto_approve_documents(created_documents_to_validate)
-            else:
-                await self._create_pending_validations(created_documents_to_validate)
-            
             # ========== Create Address ==========
             address_entity = DtoToEntityMapper.address(dto.address)
             address_entity.user_id = user_id
             address_model = EntityToModelMapper.address(address_entity)
             await self.address_repo.create(address_model)
-
-            # ========== Create student card ==========
-            if is_creating_student:
-                async def _create_student_card(
-                    student_dto: UserCreateDTO,
-                    student_id: bytes,
-                    student_sequential: int
-                ) -> DocumentCreateDTO:
-                    card_html = ''
-                    with open("src/templates/docs/student_card.html", "r", encoding="utf-8") as f:
-                        card_html = f.read()
-                    card_html = card_html.replace('${studentSequential}', str(student_sequential))
-                    card_html = card_html.replace('${name}', student_dto.name)
-                    card_html = card_html.replace('${document}', student_dto.document)
-                    card_html = card_html.replace('${birthdate}', student_dto.birthdate.strftime("%d/%m/%Y"))
-                    card_html = card_html.replace('${studentPhotoBase64}', student_dto.user_photo.base64)
-                    card_html = card_html.replace('${userFullAddress}', f'{student_dto.address.street}, {student_dto.address.number} - {student_dto.address.neighborhood}, {FormatHandler.format_zip_code(student_dto.address.zip_code)}')
-                    student_phone_number = student_dto.cellphone_number if student_dto.cellphone_number else ''
-                    card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
-
-                    from src.infrastructure.pdf.pdf_render_service import PdfRenderService
-
-                    return DocumentCreateDTO(
-                        base64=PdfRenderService.render_to_base64(card_html),
-                        user_id=str(UUID(bytes=student_id)),
-                        document_type_id=8,
-                        is_front=None,
-                        legal_representative_id=None
-                    )
-
-                student_card = await _create_student_card(dto, saved_model.id, saved_model.student_sequential)
-                await _create_document(student_card, user_id_bytes)
 
             self.repository.session.commit()
             
