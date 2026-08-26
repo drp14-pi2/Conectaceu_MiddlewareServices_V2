@@ -43,7 +43,8 @@ class AuthService:
     async def create_refresh_token(self, user_id: UUID) -> str:
         """Create JWT refresh token"""
         try:
-            expire = DateTimeHandler.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+            now = DateTimeHandler.utc_now()
+            expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
             payload = {
                 "sub": str(user_id),
                 "exp": expire,
