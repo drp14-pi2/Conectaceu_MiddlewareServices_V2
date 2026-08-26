@@ -33,24 +33,12 @@ class CourseService(BaseService):
         created_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> CourseViewModel:
-        """Create a new course with components"""
+        """Create a new course"""
         try:
             # Check if name already exists
             existing = await self.repository.get_by_name(dto.name)
             if existing:
                 raise ValueError("Nome de curso já existe")
-            
-            # Validate components count (1 to 30)
-            if not dto.components or len(dto.components) == 0:
-                raise ValueError("Curso deve conter pelo menos 1 (um) componente")
-            
-            if len(dto.components) > 30:
-                raise ValueError("Curso não pode ter mais que 30 (trinta) componentes")
-            
-            # Validate component names are unique within the course
-            component_names = [c.name for c in dto.components]
-            if len(component_names) != len(set(component_names)):
-                raise ValueError("Nomes de componentes devem ser únicos dentro de um mesmo curso")
             
             # Business rule: Validate workload
             if dto.workload < 1:
@@ -62,22 +50,6 @@ class CourseService(BaseService):
             # Convert Entity -> Model and save
             model = EntityToModelMapper.course(entity)
             saved_model = await self.repository.create(model)
-            course_id = saved_model.id  # UUID bytes
-            course_uuid = UUID(bytes=course_id)
-            
-            # Create all components
-            saved_components_viewmodels: list[CourseComponentViewModel] = []
-            for component_dto in dto.components:
-                component_dto.course_id = str(course_uuid)
-                # Convert DTO -> Entity with course_id
-                component_entity = DtoToEntityMapper.course_component(component_dto)
-                
-                # Convert Entity -> Model and save
-                component_model = EntityToModelMapper.course_component(component_entity)
-                component_model.active = True
-                saved_component_model = await self.component_repo.create(component_model)
-                saved_entity = ModelToEntityMapper.course_component(saved_component_model)
-                saved_components_viewmodels.append(EntityToViewModelMapper.course_component(saved_entity))
 
             if created_by_user_id:
                 from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
@@ -97,7 +69,6 @@ class CourseService(BaseService):
             # Convert back to ViewModel
             saved_entity = ModelToEntityMapper.course(saved_model)
             saved_couse_viewmodel = EntityToViewModelMapper.course(saved_entity)
-            saved_couse_viewmodel.course_components = saved_components_viewmodels
 
             return saved_couse_viewmodel
         except Exception as e:
