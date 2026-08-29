@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class DocumentCreateDTO(BaseModel):
     """DTO for uploading a document"""
-    base64: str
+    base64: str = Field(max_length=20_000_000)
     user_id: Optional[str] = None
     document_type_id: int
     is_front: Optional[bool] = None

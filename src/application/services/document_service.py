@@ -38,11 +38,16 @@ class DocumentService(BaseService):
     async def upload_document(self, dto: DocumentCreateDTO) -> DocumentViewModel:
         """Upload a new document"""
         try:
+            MAX_SIZE_LIMIT: int = 20_000_000
+            fileLength: int = len(dto.base64)
+            if fileLength > MAX_SIZE_LIMIT:
+                raise ValueError(f'Conteúdo do documento não pode ser maior que {MAX_SIZE_LIMIT / 1_000_000} MB')
+            
+            if fileLength <= 0:
+                raise ValueError('Conteúdo do documento não pode ser vazio')
+            
             if DocumentTypes.is_template_type(dto.document_type_id):
                 raise ValueError('Este tipo de documento não pode ser salvo')
-
-            if len(dto.base64) <= 0:
-                raise ValueError('Conteúdo do documento não pode ser vazio')
             
             if not dto.user_id:
                 raise ValueError('Documento precisa estar atrelado a um usuário')
