@@ -4,19 +4,17 @@ from typing import List
 from uuid import UUID, uuid4
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.application.mappers.class_mapper import ClassMapper
+from src.application.services.base_service import BaseService
+from src.data.models.class_model import ClassModel
+from src.data.models.course_component_model import CourseComponentModel
+from src.data.models.course_model import CourseModel
+from src.data.models.user_course_model import UserCourseModel
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
-from src.application.services.base_service import BaseService
-from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
-from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.class_dto import ClassBulkCreateDTO, ClassCreateDTO, ClassUpdateDTO, ClassFilterDTO
-from src.domain.entities.class_ import Class
-from src.domain.view_models.class_view_model import ClassViewModel
+from src.domain.schemas.class_ import Class, ClassBulkCreate, ClassCreate, ClassFilter, ClassUpdate
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ClassService(BaseService):
@@ -29,56 +27,59 @@ class ClassService(BaseService):
         user_course_repo: UserCourseRepository,
         course_repo: CourseRepository
     ):
-        super().__init__(repository, 'class_', mapper_class=ModelToEntityMapper)
+        super().__init__(repository, 'class_', mapper_class=ClassMapper)
         self.repository = repository
         self.component_repo = component_repo
         self.user_course_repo = user_course_repo
         self.course_repo = course_repo
     
-    async def create_class(self, dto: ClassCreateDTO) -> ClassViewModel:
+    async def create_class(self, dto: ClassCreate) -> Class:
         """Create a new class"""
         try:
             # Validate component exists and is active
-            component = await self.component_repo.get_by_id(UUID(dto.component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(dto.component_id))
+
             if not component:
-                raise ValueError("Component not found")
-            if not component.active:
-                raise ValueError("Component is not active")
+                raise ValueError("Componente não encontrado")
             
-            entity = DtoToEntityMapper.class_(dto)
-            model = EntityToModelMapper.class_(entity)
-            saved_model = await self.repository.create(model)
+            if not component.active:
+                raise ValueError("Componentes inativo")
+            
+            model: ClassModel = ClassMapper.create_to_model(dto)
+            saved_model: ClassModel = await self.repository.create(model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.class_(saved_model)
-            return EntityToViewModelMapper.class_(saved_entity)
+
+            return ClassMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def bulk_create_classes(self, dto: ClassBulkCreateDTO) -> dict:
+    async def bulk_create_classes(self, dto: ClassBulkCreate) -> dict:
         """Create one class per date in the range"""
-        component = await self.component_repo.get_by_id(UUID(dto.course_component_id))
+        component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(dto.course_component_id))
+
         if not component:
             raise ValueError("Componente não encontrado")
         
-        dates = self._generate_class_dates(dto.start_date, dto.end_date, dto.days_of_week)
+        dates: List[date] = self._generate_class_dates(dto.start_date, dto.end_date, dto.days_of_week)
         
         if not dates:
             raise ValueError("Nenhuma data encontrada no período e dias selecionados")
         
-        created = []
-        skipped = []
+        created: List[date] = []
+        skipped: List[date] = []
         
         for class_date in dates:
             # Check if class already exists for this component and date
-            existing = await self.repository.get_by_date_and_component(
+            existing_class: ClassModel | None = await self.repository.get_by_date_and_component(
                 component_id=UUID(dto.course_component_id),
                 date=class_date
             )
-            if existing:
+
+            if existing_class:
                 skipped.append(class_date.isoformat())
                 continue
             
-            entity = Class(
+            new_class: ClassCreate = ClassCreate(
                 id=uuid4(),
                 created_at=DateTimeHandler.now(),
                 updated_at=None,
@@ -87,8 +88,8 @@ class ClassService(BaseService):
                 date=datetime.combine(class_date, datetime.min.time()),
                 course_component_id=UUID(dto.course_component_id)
             )
-            model = EntityToModelMapper.class_(entity)
-            await self.repository.create(model)
+            class_model: ClassModel = ClassMapper.create_to_model(new_class)
+            await self.repository.create(class_model)
             created.append(class_date.isoformat())
         
         self.repository.session.commit()
@@ -102,46 +103,41 @@ class ClassService(BaseService):
             'skipped_dates': skipped
         }
     
-    async def update_class(self, class_id: UUID, dto: ClassUpdateDTO) -> ClassViewModel:
+    async def update_class(self, class_id: UUID, dto: ClassUpdate) -> Class:
         """Update a class"""
         try:
-            model = await self.repository.get_by_id(class_id)
+            model: ClassModel | None = await self.repository.get_by_id(class_id)
+
             if not model:
-                raise ValueError("Class not found")
+                raise ValueError("Aula não encontrada")
             
-            entity = ModelToEntityMapper.class_(model)
-            updated_entity = UpdateMapper.class_(entity, dto)
-            updated_model = EntityToModelMapper.class_(updated_entity)
-            saved_model = await self.repository.update(updated_model)
+            updated_model: ClassModel = ClassMapper.update_model(model, dto)
+            saved_model: ClassModel = await self.repository.update(updated_model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.class_(saved_model)
-            return EntityToViewModelMapper.class_(saved_entity)
+
+            return ClassMapper.model_to_schema(saved_model);
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def find_classes(self, filters: ClassFilterDTO) -> list[ClassViewModel]:
+    async def find_classes(self, filters: ClassFilter) -> List[Class]:
         """Find classes with filters"""
         try:
-            skip = (filters.page - 1) * filters.page_size
-            
-            models = await self.repository.find_by_filters(
+            skip: int = (filters.page - 1) * filters.page_size
+            models: List[ClassModel] = await self.repository.find_by_filters(
                 component_id=UUID(filters.component_id) if filters.component_id else None,
                 active=filters.active,
                 skip=skip,
                 limit=filters.page_size
             )
-            
-            entities = [ModelToEntityMapper.class_(model) for model in models]
-            view_models = [EntityToViewModelMapper.class_(entity) for entity in entities]
-            
-            return view_models
+
+            return [ClassMapper.model_to_schema(model) for model in models]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def deactivate_class(self, course_id: UUID) -> bool:
         """Deactivate a class and all its active enrollments"""
         try:
-            class_ = await self.repository.get_by_id(course_id)
+            class_: ClassModel | None = await self.repository.get_by_id(course_id)
             if not class_:
                 raise ValueError("Class not found")
             
@@ -149,7 +145,7 @@ class ClassService(BaseService):
                 raise ValueError("Class already deactivated")
             
             # Get all active enrollments for this class
-            active_enrollments = await self.user_course_repo.get_active_by_course_id(course_id)
+            active_enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_id)
             
             # Deactivate all enrollments and log the action
             for enrollment in active_enrollments:
@@ -172,43 +168,54 @@ class ClassService(BaseService):
     async def activate_class(self, class_id: UUID) -> bool:
         """Activate a class"""
         try:
-            class_ = await self.repository.get_by_id(class_id)
+            class_: ClassModel | None = await self.repository.get_by_id(class_id)
             if not class_:
-                raise ValueError("Class not found")
+                raise ValueError("Aula não encontrada")
             
             if class_.active:
-                raise ValueError("Class already active")
+                raise ValueError("Aula inativa")
             
             # Check if component is active
-            component = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+
             if not component or not component.active:
-                raise ValueError("Cannot activate class because component is inactive")
+                raise ValueError("Não foi possível desativar a aula porque o component está desativado")
             
-            result = await self.repository.activate(class_id)
+            activated = await self.repository.activate(class_id)
             self.repository.session.commit()
             
-            return result
+            return activated
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def get_available_seats(self, class_id: UUID) -> dict:
         """Get available seats for a class"""
         try:
-            class_ = await self.repository.get_by_id(class_id)
+            class_: ClassModel | None = await self.repository.get_by_id(class_id)
+
             if not class_:
-                raise ValueError("Class not found")
+                raise ValueError("Aula não encontrada")
             
-            component = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+
+            if not component:
+                raise ValueError("Componente não encontrado")
+
+            course: CourseModel | None = await self.course_repo.get_by_id(UUID(bytes=component.course_id))
+
+            if not course:
+                raise ValueError("Curso não encontrado")
             
             return {
                 'class_id': class_id,
                 'seats_in_use': class_.seats_in_use,
-                'seat_limit': component.seat_limit_per_class if component else 0,
-                'available_seats': component.seat_limit_per_class - class_.seats_in_use if component else 0
+                'seat_limit': course.total_seat_limit,
+                'available_seats': course.total_seat_limit - class_.seats_in_use
             }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
+    # Private methods
     def _generate_class_dates(
         self,
         start_date: date,

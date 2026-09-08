@@ -1,0 +1,10 @@
+"""Password reset schemas"""
+from pydantic import BaseModel, EmailStr, Field
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetSubmit(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(min_length=8, max_length=128)

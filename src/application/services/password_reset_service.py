@@ -1,12 +1,14 @@
 """Password reset service - handles forgot password flow"""
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import Any
 from uuid import UUID
 import secrets
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.user_model import UserModel
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.user_password_history_service import UserPasswordHistoryService
-from src.domain.dtos.user_dto import PasswordResetRequestDTO
+from src.domain.schemas.password_reset import PasswordResetRequest
 from src.infrastructure.handlers.password_hasher import PasswordHasher
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.configuration.settings import settings
@@ -25,7 +27,7 @@ class PasswordResetService:
         self.password_history_service = password_history_service
         self.email_service = email_service
     
-    async def request_password_reset(self, body: PasswordResetRequestDTO) -> dict:
+    async def request_password_reset(self, body: PasswordResetRequest) -> dict:
         """
         Request password reset by email.
         Generates reset token and sends email.
@@ -39,38 +41,32 @@ class PasswordResetService:
         try:
             RETURN_MESSAGE: str = "Se o e-mail estiver na nossa base de dados, uma mensagem será enviada"
             # Find user by email
-            user = await self.user_repo.get_by_email(body.email)
-            if not user:
-                # Don't reveal if user exists or not (security)
-                return {"message": RETURN_MESSAGE}
-            
-            # Check if user is active
-            if not user.active:
+            user: UserModel | None = await self.user_repo.get_by_email(body.email)
+
+            # Doesn't reveal if the user exists or not for security
+            if not user or not user.active:
                 return {"message": RETURN_MESSAGE}
             
             # Generate reset token
-            reset_token = secrets.token_urlsafe(32)
-            token_expiry = DateTimeHandler.utc_now() + timedelta(hours=1)
-            
+            reset_token: str = secrets.token_urlsafe(32)
+            token_expiry: datetime = DateTimeHandler.utc_now() + timedelta(hours=1)
             # Save token to user
             user.password_reset_token = reset_token
             user.password_reset_expires = token_expiry
             await self.user_repo.update(user)
             self.user_repo.session.commit()
-            
             # Send email
-            frontend_url = settings.APP_FRONTEND_URL
             await self.email_service.send_password_reset_email(
                 to_email=user.email,
                 reset_token=reset_token,
-                frontend_url=frontend_url
+                frontend_url=settings.APP_FRONTEND_URL
             )
             
             return {"message": RETURN_MESSAGE}
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def validate_reset_token(self, token: str) -> dict:
+    async def validate_reset_token(self, token: str) -> dict[str, Any]:
         """
         Validate password reset token.
         
@@ -82,13 +78,15 @@ class PasswordResetService:
         """
         try:
             # Find user by reset token
-            user = await self.user_repo.find_by_password_reset_token(token)
+            user: UserModel | None= await self.user_repo.find_by_password_reset_token(token)
+
             if not user:
                 return {"valid": False, "reason": "Token inválido ou expirado"}
             
             # Check if token is expired
             if user.password_reset_expires:
-                expires = user.password_reset_expires.replace(tzinfo=DateTimeHandler.UTC_TZ)
+                expires: datetime = user.password_reset_expires.replace(tzinfo=DateTimeHandler.UTC_TZ)
+
                 if expires < DateTimeHandler.utc_now():
                     return {"valid": False, "reason": "Token expirado"}
             
@@ -113,18 +111,19 @@ class PasswordResetService:
         """
         try:
             # Validate token
-            validation = await self.validate_reset_token(token)
+            validation: dict[str, Any] = await self.validate_reset_token(token)
+
             if not validation["valid"]:
                 return {"success": False, "reason": validation["reason"]}
             
-            user_id = UUID(validation["user_id"])
-            user = await self.user_repo.get_by_id(user_id)
+            user_id: UUID = UUID(validation["user_id"])
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
             
             # Validate password strength
             self._validate_password(new_password)
             
             # Check password history
-            validation_result = await self.password_history_service.validate_password_change(
+            validation_result: dict[str, Any] = await self.password_history_service.validate_password_change(
                 user_id=user_id,
                 new_plain_password=new_password,
                 history_check_count=5
@@ -135,9 +134,9 @@ class PasswordResetService:
             
             # Hash and update password
             from src.application.services.auth_service import AuthService
-            hashed_password = PasswordHasher.hash_password(new_password)
+            hashed_password: str = PasswordHasher.hash_password(new_password)
             
-            success = await self.user_repo.update_password(user_id, hashed_password)
+            success: bool = await self.user_repo.update_password(user_id, hashed_password)
             self.user_repo.session.commit()
             
             if success:

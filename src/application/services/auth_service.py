@@ -1,17 +1,18 @@
 """Authentication service - JWT token management and user authentication"""
-from datetime import timedelta
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Any, Optional
 from uuid import UUID
 import bcrypt
 from jose import jwt, JWTError
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.application.mappers.user_mapper import UserMapper
+from src.data.models.user_model import UserModel
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
-from src.domain.dtos.auth_dto import LoginDTO
-from src.infrastructure.configuration.settings import settings
 from src.data.repositories.user_repository import UserRepository
-from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-from src.domain.entities.user import User
+from src.domain.schemas.auth import Login
+from src.domain.schemas.user import User
+from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class AuthService:
@@ -28,9 +29,9 @@ class AuthService:
     async def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
         """Create JWT access token"""
         try:
-            now = DateTimeHandler.utc_now()
-            expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            payload = {
+            now: datetime = DateTimeHandler.utc_now()
+            expire: datetime = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            payload: dict[str, Any] = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
                 "exp": int(expire.timestamp()),
@@ -43,9 +44,9 @@ class AuthService:
     async def create_refresh_token(self, user_id: UUID) -> str:
         """Create JWT refresh token"""
         try:
-            now = DateTimeHandler.utc_now()
-            expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-            payload = {
+            now: datetime = DateTimeHandler.utc_now()
+            expire: datetime = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+            payload: dict[str, Any] = {
                 "sub": str(user_id),
                 "exp": expire,
                 "iat": DateTimeHandler.now(),
@@ -55,14 +56,15 @@ class AuthService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def verify_token(self, token: str) -> Optional[dict]:
+    async def verify_token(self, token: str) -> Optional[dict[str, Any]]:
         """Verify JWT token and return payload"""
         try:
-            payload = jwt.decode(
+            payload: dict[str, Any] = jwt.decode(
                 token,
                 settings.SECRET_KEY,
                 algorithms=[settings.JWT_ALGORITHM]
             )
+            
             return payload
         except JWTError:
             return None
@@ -72,23 +74,26 @@ class AuthService:
     async def get_user_from_token(self, token: str) -> Optional[User]:
         """Get user from JWT token"""
         try:
-            payload = await self.verify_token(token)
+            payload: dict[str, Any] | None = await self.verify_token(token)
+
             if not payload:
                 return None
             
-            user_id = payload.get("sub")
+            user_id: str | None = payload.get("sub")
+
             if not user_id:
                 return None
             
-            user_model = await self.user_repo.get_by_id(UUID(user_id))
+            user_model: UserModel | None = await self.user_repo.get_by_id(UUID(user_id))
+
             if not user_model:
                 return None
             
-            return ModelToEntityMapper.user(user_model)
+            return UserMapper.model_to_schema(user_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def authenticate(self, body: LoginDTO) -> Optional[dict]:
+    async def authenticate(self, body: Login) -> Optional[dict[str, Any]]:
         """
         Authenticate user with document and password.
         
@@ -101,12 +106,10 @@ class AuthService:
         """
         try:
             # Find user by document
-            user = await self.user_repo.get_by_document(body.document)
-            if not user:
-                return None
-            
-            # Check if user is active
-            if not user.active:
+            user: UserModel | None = await self.user_repo.get_by_document(body.document)
+
+            # Is user valid
+            if not user or not user.active:
                 return None
             
             # Verify password
@@ -114,9 +117,10 @@ class AuthService:
                 return None
             
             # Generate tokens
-            user_uuid = UUID(bytes=user.id)
-            has_pending_deactivation = await self.profiles_to_exclude_repo.is_within_cancellation_window(user_uuid)
-            
+            user_uuid: UUID = UUID(bytes=user.id)
+            has_pending_deactivation: bool = await self.profiles_to_exclude_repo.is_within_cancellation_window(user_uuid)
+
+            # Validates if a user has an active deactivation process
             if has_pending_deactivation:
                 # Cancel the deactivation
                 await self.profiles_to_exclude_repo.delete_exclusion(user_uuid)
@@ -126,7 +130,8 @@ class AuthService:
                 
                 # Log reactivation
                 from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
-                log_repo = LogUserActivationRepository(self.user_repo.session)
+
+                log_repo: LogUserActivationRepository = LogUserActivationRepository(self.user_repo.session)
                 await log_repo.log(
                     deactivation_reason=None,
                     activated=True,
@@ -136,8 +141,8 @@ class AuthService:
                 )
                 self.user_repo.session.commit()
 
-            access_token = await self.create_access_token(user_uuid, user.user_type_id)
-            refresh_token = await self.create_refresh_token(user_uuid)
+            access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
+            refresh_token: str = await self.create_refresh_token(user_uuid)
             
             return {
                 "access_token": access_token,
@@ -154,7 +159,7 @@ class AuthService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def refresh_access_token(self, refresh_token: str) -> Optional[dict]:
+    async def refresh_access_token(self, refresh_token: str) -> Optional[dict[str, Any]]:
         """
         Refresh access token using refresh token.
         
@@ -165,21 +170,24 @@ class AuthService:
             Dict with new tokens if successful, None otherwise
         """
         try:
-            payload = await self.verify_token(refresh_token)
+            payload: dict[str, Any] = await self.verify_token(refresh_token)
+
             if not payload or payload.get("type") != "refresh":
                 return None
             
-            user_id = payload.get("sub")
+            user_id: str = payload.get("sub")
+
             if not user_id:
                 return None
             
-            user = await self.user_repo.get_by_id(UUID(user_id))
+            user: UserModel = await self.user_repo.get_by_id(UUID(user_id))
+
             if not user or not user.active:
                 return None
             
             # Create new tokens
-            access_token = await self.create_access_token(UUID(user_id), user.user_type_id)
-            new_refresh_token = await self.create_refresh_token(UUID(user_id))
+            access_token: str = await self.create_access_token(UUID(user_id), user.user_type_id)
+            new_refresh_token: str = await self.create_refresh_token(UUID(user_id))
             
             return {
                 "access_token": access_token,
@@ -189,39 +197,8 @@ class AuthService:
             }
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
-    
-    async def validate_credentials(self, document: str, password: str) -> dict:
-        """
-        Validate user credentials without generating tokens.
-        Useful for password change validation or pre-authentication checks.
-        
-        Args:
-            document: User's document (CPF)
-            password: Plain text password
-            
-        Returns:
-            Dict with validation result
-        """
-        try:
-            user = await self.user_repo.get_by_document(document)
-            if not user:
-                return {'valid': False, 'reason': 'User not found'}
-            
-            if not user.active:
-                return {'valid': False, 'reason': 'User is deactivated'}
-            
-            if not await self._verify_password(password, user.password):
-                return {'valid': False, 'reason': 'Invalid password'}
-            
-            return {
-                'valid': True,
-                'user_id': str(UUID(bytes=user.id)),
-                'user_type_id': user.user_type_id
-            }
-        except Exception as e:
-            await ApplicationLogger.log_error(e, reraise=True)
-        
-    
+
+    # Private methods
     async def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """
         Verify a plain password against a hashed password.

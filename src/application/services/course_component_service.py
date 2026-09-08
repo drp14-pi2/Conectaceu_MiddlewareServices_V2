@@ -3,104 +3,119 @@ from typing import List
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.application.mappers.course_component_mapper import CourseComponentMapper
+from src.data.models.course_component_model import CourseComponentModel
+from src.data.models.course_model import CourseModel
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.application.services.base_service import BaseService
-from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
-from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.course_component_dto import CourseComponentCreateDTO, CourseComponentUpdateDTO
-from src.domain.view_models.course_component_view_model import CourseComponentViewModel
+from src.data.repositories.course_repository import CourseRepository
+from src.domain.schemas.course_component import CourseComponent, CourseComponentCreate, CourseComponentUpdate
 
 class CourseComponentService(BaseService):
     """Service for Course Component business logic"""
     
-    def __init__(self, repository: CourseComponentRepository):
-        super().__init__(repository, 'course_component', mapper_class=ModelToEntityMapper)
+    def __init__(
+        self,
+        repository: CourseComponentRepository,
+        course_repository: CourseRepository
+    ):
+        super().__init__(repository, 'course_component', mapper_class=CourseComponentMapper)
+        self.course_repo = course_repository
         self.repository = repository
     
-    async def create_component(self, dto: CourseComponentCreateDTO) -> CourseComponentViewModel:
+    async def create_component(self, dto: CourseComponentCreate) -> CourseComponent:
         """Create a new course component"""
         try:
-            if not dto.course_id:
-                raise ValueError("ID do curso é obrigatório")
+            # Validate course
+            course: CourseModel | None = await self.course_repo.get_by_id(dto.course_id)
 
-            component_exists = await self.repository.component_exists(dto.name, UUID(dto.course_id))
+            if not course:
+                raise ValueError("Curso não encontrado")
+
+            # Validate if component already exists
+            component_exists = await self.repository.component_exists(dto.name, UUID(bytes=course.id))
+
             if component_exists:
                 raise ValueError("Componente já existe para este curso")
-            
-            entity = DtoToEntityMapper.course_component(dto)
-            model = EntityToModelMapper.course_component(entity)
-            model.active = True
+
+            # Create component
+            model = CourseComponentMapper.create_to_model(dto)
+
+            if not model.active:
+                model.active = True
+
             saved_model = await self.repository.create(model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.course_component(saved_model)
-            return EntityToViewModelMapper.course_component(saved_entity)
+
+            return CourseComponentMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def update_component(self, component_id: UUID, dto: CourseComponentUpdateDTO) -> CourseComponentViewModel:
+    async def update_component(self, component_id: UUID, dto: CourseComponentUpdate) -> CourseComponent:
         """Update a course component"""
         try:
-            model = await self.repository.get_by_id(component_id)
-            if not model:
+            # Validate component
+            component: CourseComponentModel | None = await self.repository.get_by_id(component_id)
+
+            if not component:
                 raise ValueError("Componente não encontrado")
-            
+
             if dto.name:
-                component_exists = await self.repository.component_exists(dto.name)
-                if component_exists and component_exists.id != model.id:
-                    raise ValueError("Componente já existe com este nome")
-            
-            entity = ModelToEntityMapper.course_component(model)
-            updated_entity = UpdateMapper.course_component(entity, dto)
-            updated_model = EntityToModelMapper.course_component(updated_entity)
-            saved_model = await self.repository.update(updated_model)
+                component_exists: bool = await self.repository.component_exists(dto.name, UUID(bytes=component.course_id))
+
+                if component_exists:
+                    raise ValueError("Componente já existe com esse nome")
+
+            # Update component
+            updated_model: CourseComponentModel = CourseComponentMapper.update_model(component, dto)
+            saved_model: CourseComponentModel = await self.repository.update(updated_model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.course_component(saved_model)
-            return EntityToViewModelMapper.course_component(saved_entity)
+
+            return CourseComponentMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_course_components(self, course_id: UUID) -> List[CourseComponentViewModel]:
+    async def get_course_components(self, course_id: UUID) -> List[CourseComponent]:
         """Get all components for a course"""
         try:
             models = await self.repository.get_by_course_id(course_id)
-            entities = [ModelToEntityMapper.course_component(model) for model in models]
-            return [EntityToViewModelMapper.course_component(entity) for entity in entities]
+
+            return [CourseComponentMapper.model_to_schema(model) for model in models]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def deactivate_component(self, component_id: UUID) -> bool:
         """Deactivate a component"""
         try:
-            component = await self.repository.get_by_id(component_id)
+            component: CourseComponentModel | None = await self.repository.get_by_id(component_id)
+
             if not component:
                 raise ValueError("Componente não encontrado")
             
             if not component.active:
                 raise ValueError("Componente já desativado")
             
-            result = await self.repository.deactivate(component_id)
+            deactivated: bool = await self.repository.deactivate(component_id)
             self.repository.session.commit()
             
-            return result
+            return deactivated
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
     async def activate_component(self, component_id: UUID) -> bool:
         """Activate a component"""
         try:
-            component = await self.repository.get_by_id(component_id)
+            component: CourseComponentModel | None = await self.repository.get_by_id(component_id)
+
             if not component:
                 raise ValueError("Componente não encontrado")
             
             if component.active:
                 raise ValueError("Componente já ativo")
             
-            result = await self.repository.activate(component_id)
+            activated: bool = await self.repository.activate(component_id)
             self.repository.session.commit()
             
-            return result
+            return activated
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

@@ -3,67 +3,63 @@ from typing import List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.address_model import AddressModel
 from src.data.repositories.address_repository import AddressRepository
 from src.application.services.base_service import BaseService
-from src.application.mappers.dto_to_entity_mapper import DtoToEntityMapper
-from src.application.mappers.entity_to_model_mapper import EntityToModelMapper
-from src.application.mappers.model_to_entity_mapper import ModelToEntityMapper
-from src.application.mappers.entity_to_view_model_mapper import EntityToViewModelMapper
-from src.application.mappers.update_mapper import UpdateMapper
-from src.domain.dtos.address_dto import AddressCreateDTO, AddressUpdateDTO
-from src.domain.view_models.address_view_model import AddressViewModel
+from src.domain.schemas.address import Address, AddressCreate, AddressUpdate
+from src.application.mappers.address_mapper import AddressMapper
 
 class AddressService(BaseService):
     """Service for Address business logic"""
     
     def __init__(self, repository: AddressRepository):
-        super().__init__(repository, 'address', mapper_class=ModelToEntityMapper)
+        super().__init__(repository, 'address', mapper_class=AddressMapper)
         self.repository = repository
     
-    async def create_address(self, dto: AddressCreateDTO) -> AddressViewModel:
+    async def create_address(self, dto: AddressCreate) -> Address:
         """Create a new address"""
         try:
-            entity = DtoToEntityMapper.address(dto)
-            model = EntityToModelMapper.address(entity)
-            saved_model = await self.repository.create(model)
+            model: AddressModel | None = AddressMapper.create_to_model(dto)
+            saved_model: AddressModel = await self.repository.create(model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.address(saved_model)
-            return EntityToViewModelMapper.address(saved_entity)
+
+            return AddressMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def update_address(self, address_id: UUID, dto: AddressUpdateDTO) -> AddressViewModel:
+    async def update_address(self, address_id: UUID, dto: AddressUpdate) -> Address:
         """Update an address"""
         try:
-            model = await self.repository.get_by_id(address_id)
+            model: AddressModel | None = await self.repository.get_by_id(address_id)
+
             if not model:
-                raise ValueError("Address not found")
+                raise ValueError("Endereço não encontrado")
             
-            entity = ModelToEntityMapper.address(model)
-            updated_entity = UpdateMapper.address(entity, dto)
-            updated_model = EntityToModelMapper.address(updated_entity)
-            saved_model = await self.repository.update(updated_model)
+            updated_model: AddressModel = AddressMapper.update_model(model, dto)
+            saved_model: AddressModel = await self.repository.update(updated_model)
             self.repository.session.commit()
-            saved_entity = ModelToEntityMapper.address(saved_model)
-            return EntityToViewModelMapper.address(saved_entity)
+
+            return AddressMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_addresses(self, user_id: UUID) -> List[AddressViewModel]:
+    async def get_user_addresses(self, user_id: UUID) -> List[Address]:
+        """Get all addresses for a user"""
         try:
-            """Get all addresses for a user"""
-            models = await self.repository.get_by_user_id(user_id)
-            entities = [ModelToEntityMapper.address(model) for model in models]
-            return [EntityToViewModelMapper.address(entity) for entity in entities]
+            models: List[AddressModel] = await self.repository.get_by_user_id(user_id)
+
+            return [AddressMapper.model_to_schema(model) for model in models]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_primary_address(self, user_id: UUID) -> Optional[AddressViewModel]:
+    async def get_primary_address(self, user_id: UUID) -> Optional[Address]:
         """Get user's primary address"""
         try:
-            model = await self.repository.get_primary_address(user_id)
-            if model:
-                entity = ModelToEntityMapper.address(model)
-                return EntityToViewModelMapper.address(entity)
+            model: AddressModel | None = await self.repository.get_primary_address(user_id)
+
+            if not model:
+                raise ValueError("Endereço não encontrado")
+
+            return AddressMapper.model_to_schema(model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)

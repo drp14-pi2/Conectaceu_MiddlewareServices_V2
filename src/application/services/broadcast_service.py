@@ -3,6 +3,8 @@ from typing import AsyncGenerator, List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.data.models.class_model import ClassModel
+from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.user_course_model import UserCourseModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.class_repository import ClassRepository
@@ -10,10 +12,10 @@ from src.data.repositories.course_component_repository import CourseComponentRep
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
+from src.domain.schemas.broadcast_message import BroadcastMessageCreate, BroadcastDocument
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.messaging.sms.sms_service import SmsService
 from src.infrastructure.messaging.whatsapp.whatsapp_service import WhatsAppService
-from src.domain.dtos.broadcast_message_dto import BroadcastMessageCreateDTO
 
 class BroadcastService:
     """Service for sending broadcast messages via multiple channels"""
@@ -40,17 +42,17 @@ class BroadcastService:
     
     async def send_broadcast(
         self,
-        dto: BroadcastMessageCreateDTO,
+        dto: BroadcastMessageCreate,
         sender_user_id: UUID,
         sender_ip_address: str
-    ) -> dict:
+    ) -> dict[str, int]:
         """
         Send broadcast message to recipients via selected channels.
         """
         try:
             # Extract documents from list (max 2)
-            document_1 = dto.documents[0] if len(dto.documents) > 0 else None
-            document_2 = dto.documents[1] if len(dto.documents) > 1 else None
+            document_1: BroadcastDocument = dto.documents[0] if len(dto.documents) > 0 else None
+            document_2: BroadcastDocument = dto.documents[1] if len(dto.documents) > 1 else None
             results = {
                 'email_sent': 0,
                 'email_failed': 0,
@@ -72,7 +74,7 @@ class BroadcastService:
                     # Send email
                     if dto.send_email and user.email:
                         try:
-                            email_sent = await self.email_service.send_broadcast_email(
+                            email_sent: bool = await self.email_service.send_broadcast_email(
                                 to_email=user.email,
                                 subject=dto.subject,
                                 message=self._format_html_message(dto.message),
@@ -92,7 +94,7 @@ class BroadcastService:
                     # Send WhatsApp
                     # if dto.send_whatsapp and user.cellphone_number:
                     #     try:
-                    #         whatsapp_sent = await self.whatsapp_service.send_whatsapp(
+                    #         whatsapp_sent: bool = await self.whatsapp_service.send_whatsapp(
                     #             to_phone=user.cellphone_number,
                     #             message=dto.message,
                     #             document_1_base64=document_1,
@@ -109,7 +111,7 @@ class BroadcastService:
                     # Send SMS
                     # if dto.send_sms and user.cellphone_number:
                     #     try:
-                    #         sms_sent = await self.sms_service.send_sms(
+                    #         sms_sent: bool = await self.sms_service.send_sms(
                     #             to_phone=user.cellphone_number,
                     #             message=dto.message[:160]
                     #         )
@@ -143,7 +145,8 @@ class BroadcastService:
             return results
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
-    
+
+    # Private methods
     async def _stream_recipients(
         self,
         user_ids: Optional[List[str]] = None,
@@ -172,15 +175,14 @@ class BroadcastService:
             async for user in self._stream_students_by_course_id(seen_ids, UUID(course_id)):
                 yield user
             return
-            
 
     async def _stream_all_students(self, seen_ids: set) -> AsyncGenerator[UserModel, None]:
         """Stream all active students in batches."""
-        page_size = 100
-        page = 0
+        page_size: int = 100
+        page: int = 0
         
         while True:
-            users = await self.user_repo.find_by_filters(
+            users: List[UserModel] = await self.user_repo.find_by_filters(
                 user_type_id=5, # Students only
                 active=True,
                 skip=page * page_size,
@@ -201,39 +203,39 @@ class BroadcastService:
         """Stream all active students by their IDs."""
         while True:
             for user_id_str in user_ids:
-                user_id = UUID(user_id_str)
-                user = await self.user_repo.get_by_id(user_id)
+                user_id: UUID = UUID(user_id_str)
+                user: UserModel | None = await self.user_repo.get_by_id(user_id)
                 if user and user.active and user.id not in seen_ids:
                     seen_ids.add(user.id)
                     yield user
 
     async def _stream_students_by_course_id(self, seen_ids: set, course_uuid: UUID) -> AsyncGenerator[UserModel, None]:
         """Stream all active students by course"""
-        components = await self.component_repo.get_by_course_id(course_uuid)
+        components: List[CourseComponentModel] = await self.component_repo.get_by_course_id(course_uuid)
             
         for component in components:
-            component_uuid = UUID(bytes=component.id)
+            component_uuid: UUID = UUID(bytes=component.id)
             
             # Get classes for this component
-            classes = await self.class_repo.get_by_component_id(component_uuid)
+            classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_uuid)
             
             for class_ in classes:
-                class_uuid = UUID(bytes=class_.id)
+                class_uuid: UUID = UUID(bytes=class_.id)
                 
                 # Stream active enrollments one at a time
                 async for enrollment in self._stream_enrollments(class_uuid):
-                    user = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
+                    user: UserModel = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
                     if user and user.active and user.id not in seen_ids:
                         seen_ids.add(user.id)
                         yield user
 
     async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[UserCourseModel, None]:
         """Stream active enrollments for a class"""
-        page_size = 100
-        page = 0
+        page_size: int = 100
+        page: int = 0
         
         while True:
-            enrollments = await self.user_course_repo.get_active_by_course_id(
+            enrollments: UserCourseModel = await self.user_course_repo.get_active_by_course_id(
                 course_id,
                 skip=page * page_size,
                 limit=page_size
@@ -247,21 +249,20 @@ class BroadcastService:
             
             page += 1
     
-    
     def _format_html_message(self, message: str) -> str:
         """Format message as HTML for email"""
         return f"""
-        <html>
-            <body style="font-family: Arial, sans-serif;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #333;">Comunicado ConectaCEU</h2>
-                    <div style="background: #f9f9f9; padding: 20px; border-radius: 5px;">
-                        <p style="white-space: pre-wrap;">{message}</p>
+            <html>
+                <body style="font-family: Arial, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #333;">Comunicado ConectaCEU</h2>
+                        <div style="background: #f9f9f9; padding: 20px; border-radius: 5px;">
+                            <p style="white-space: pre-wrap;">{message}</p>
+                        </div>
+                        <p style="color: #666; font-size: 12px; margin-top: 20px;">
+                            Esta é uma mensagem automática do sistema ConectaCEU. Favor não responder.
+                        </p>
                     </div>
-                    <p style="color: #666; font-size: 12px; margin-top: 20px;">
-                        Esta é uma mensagem automática do sistema ConectaCEU. Favor não responder.
-                    </p>
-                </div>
-            </body>
-        </html>
+                </body>
+            </html>
         """
