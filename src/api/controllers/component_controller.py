@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from src.application.services.course_component_service import CourseComponentService
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.course_repository import CourseRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.course_component_dto import CourseComponentCreateDTO, CourseComponentUpdateDTO
-from src.domain.view_models.course_component_view_model import CourseComponentViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.course_component import CourseComponent, CourseComponentCreate
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/component",
@@ -17,22 +17,23 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_component_service(db: Session = Depends(get_db)) -> CourseComponentService:
     """Dependency injection for CourseComponentService"""
     repository = CourseComponentRepository(db)
-    return CourseComponentService(repository)
+    course_repository = CourseRepository(db)
+
+    return CourseComponentService(repository, course_repository)
 
 
-@router.post("/", response_model=CourseComponentViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=CourseComponent, status_code=status.HTTP_201_CREATED)
 async def create_component(
-    dto: CourseComponentCreateDTO,
+    dto: CourseComponentCreate,
     current_user: User = Depends(get_current_active_user),
     service: CourseComponentService = Depends(get_component_service)
 ):
     """Create a new course component. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can create components")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         return await service.create_component(dto)
@@ -48,11 +49,12 @@ async def deactivate_component(
 ):
     """Deactivate a component. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can deactivate components")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        result = await service.deactivate_component(component_id)
-        return {"message": "Component deactivated successfully", "success": result}
+        result: bool = await service.deactivate_component(component_id)
+
+        return {"message": "Componente desativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -65,16 +67,16 @@ async def activate_component(
 ):
     """Activate a component. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can deactivate components")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        result = await service.activate_component(component_id)
-        return {"message": "Component activated successfully", "success": result}
+        result: bool = await service.activate_component(component_id)
+
+        return {"message": "Componente ativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.get("/course/{course_id}", response_model=list[CourseComponentViewModel])
+@router.get("/course/{course_id}", response_model=list[CourseComponent])
 async def get_course_components(
     course_id: UUID,
     service: CourseComponentService = Depends(get_component_service)
@@ -82,14 +84,15 @@ async def get_course_components(
     """Get all components for a course."""
     return await service.get_course_components(course_id)
 
-
-@router.get("/{component_id}", response_model=CourseComponentViewModel)
+@router.get("/{component_id}", response_model=CourseComponent)
 async def get_component(
     component_id: UUID,
     service: CourseComponentService = Depends(get_component_service)
 ):
     """Get component by ID."""
-    component = await service.get_by_id(component_id)
+    component: CourseComponent | None = await service.get_by_id(component_id)
+
     if not component:
-        raise HTTPException(status_code=404, detail="Component not found")
+        raise HTTPException(status_code=404, detail="Componente não encontrado")
+    
     return component

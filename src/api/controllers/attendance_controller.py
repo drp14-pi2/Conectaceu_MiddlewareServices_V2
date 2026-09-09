@@ -14,16 +14,15 @@ from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.class_attendance_dto import BulkClassAttendanceCreateDTO
-from src.domain.dtos.document_dto import DocumentCreateDTO
-from src.domain.entities.user import User
+from src.domain.schemas.class_attendance import BulkAttendanceCreate
+from src.domain.schemas.document import DocumentCreate
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/attendance",
     tags=["Attendance"],
     dependencies=[Depends(get_current_active_user)]
 )
-
 
 def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceService:
     repository = ClassAttendanceRepository(db)
@@ -32,24 +31,30 @@ def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceServ
     component_repo = CourseComponentRepository(db)
     document_repo = DocumentRepository(db)
     absence_justification_repo = StudentAbsenceJustificationRepository(db)
-    return ClassAttendanceService(repository, user_course_repo, class_repo, component_repo, document_repo, absence_justification_repo)
 
+    return ClassAttendanceService(
+        repository,
+        user_course_repo,
+        class_repo,
+        component_repo,
+        document_repo,
+        absence_justification_repo
+    )
 
 @router.post("/class/take")
 async def take_attendance(
-    dto: BulkClassAttendanceCreateDTO,
+    dto: BulkAttendanceCreate,
     current_user: User = Depends(get_current_active_user),
     service: ClassAttendanceService = Depends(get_attendance_service)
 ):
     """Take attendance for a class. Educators (4) and Coordinators (3) only."""
     if current_user.user_type_id not in [3, 4]:
-        raise HTTPException(status_code=403, detail="Somente educadores e coordenadores podem enviar a chamada")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
         return await service.take_attendance(dto)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.get("/class/{class_id}")
 async def get_class_attendance(
@@ -59,11 +64,10 @@ async def get_class_attendance(
 ):
     """Take attendance for a class. Educators (4) and Coordinators (3) only."""
     if current_user.user_type_id not in [3, 4]:
-        raise HTTPException(status_code=403, detail="Somente educadores e coordenadores podem visualizar a chamada")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     """Get attendance for a class."""
     return await service.get_class_attendance(class_id)
-
 
 @router.get("/user/{user_id}/class/{class_id}")
 async def get_user_class_attendance(
@@ -104,7 +108,7 @@ async def get_user_classes(
 @router.post("/{attendance_id}/justify")
 async def submit_absence_justification(
     attendance_id: UUID,
-    document: DocumentCreateDTO,
+    document: DocumentCreate,
     current_user: User = Depends(get_current_active_user),
     service: ClassAttendanceService = Depends(get_attendance_service)
 ):

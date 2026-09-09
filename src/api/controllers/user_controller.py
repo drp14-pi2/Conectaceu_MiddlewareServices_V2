@@ -7,18 +7,13 @@ from sqlalchemy.orm import Session
 from src.application.services.user_service import UserService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.models.user_model import UserModel
-from src.data.repositories.address_repository import AddressRepository
-from src.data.repositories.document_repository import DocumentRepository
-from src.data.repositories.document_validation_repository import DocumentValidationRepository
-from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.user_dto import DeactivateUserDTO, UserCreateDTO, UserUpdateDTO, PasswordChangeDTO
-from src.domain.view_models.user_view_model import StudentUserViewModel, UserViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
+from src.domain.schemas.user_password_history import PasswordChange
 
 router = APIRouter(
     prefix="/user",
@@ -26,31 +21,22 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     """Dependency injection for UserService"""
     user_repo = UserRepository(db)
     password_history_repo = UserPasswordHistoryRepository(db)
     password_history_service = UserPasswordHistoryService(password_history_repo)
-    document_repo = DocumentRepository(db)
-    address_repo = AddressRepository(db)
-    legal_rep_repo = LegalRepresentativeRepository(db)
-    doc_validation_repo = DocumentValidationRepository(db)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+
     return UserService(
         user_repo,
         password_history_service,
-        document_repo,
-        address_repo,
-        legal_rep_repo,
-        doc_validation_repo,
         profiles_to_exclude_repo
     )
 
-
-@router.post("/", response_model=UserViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    dto: UserCreateDTO,
+    dto: UserCreate,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
 ):
@@ -66,12 +52,11 @@ async def create_user(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.patch("/{user_id}/deactivate")
 async def deactivate_user(
     request: Request,
     user_id: UUID,
-    dto: DeactivateUserDTO,
+    dto: DeactivateUser,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
 ):
@@ -83,22 +68,26 @@ async def deactivate_user(
     
     # Validates if student user is deactivating their own account
     if current_user.user_type_id == 5:
-        user: UserModel = await service.get_by_id(user_id)
-        if (user.id != current_user.id):
-            raise HTTPException(status_code=403, detail="Só pode desativar seu próprio usuário")
+        user: UserModel | None = await service.get_by_id(user_id)
+
+        if not user:
+            raise HTTPException(status_code=400, detail="Usuário não encontrado")
+
+        if user.id != current_user.id:
+            raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        user_ip = request.client.host if request.client else "unknown"
-        result = await service.deactivate_user(
+        user_ip: str = request.client.host if request.client else "unknown"
+        result: bool = await service.deactivate_user(
             user_id,
             dto,
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
+
         return {"message": "Usuário desativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.patch("/{user_id}/activate")
 async def activate_user(
@@ -114,18 +103,19 @@ async def activate_user(
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        user_ip = request.client.host if request.client else "unknown"
-        result = await service.activate_user(
+        user_ip: str = request.client.host if request.client else "unknown"
+        result: bool = await service.activate_user(
             user_id,
             performed_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
+
         return {"message": "Usuário ativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/list", response_model=List[UserViewModel])
+@router.get("/list", response_model=List[User])
 async def list_users(
     name: Optional[str] = Query(None),
     document: Optional[str] = Query(None),
@@ -163,7 +153,7 @@ async def list_users(
             document=document,
             email=email,
             phoneNumber=phoneNumber,
-            user_type_id=5,  # Students only
+            user_type_id=5, # Students only
             active=active,
             page=page,
             page_size=page_size
@@ -171,38 +161,7 @@ async def list_users(
     
     raise HTTPException(status_code=403, detail="Não autorizado")
 
-
-@router.get("/students", response_model=List[StudentUserViewModel])
-async def list_students(
-    name: Optional[str] = Query(None),
-    document: Optional[str] = Query(None),
-    email: Optional[str] = Query(None),
-    phoneNumber: Optional[str] = Query(None),
-    active: Optional[bool] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
-    service: UserService = Depends(get_user_service)
-):
-    """
-    List students with all related data.
-    - Admin/Secretary/Coordinator/Educator: can list
-    """
-    if current_user.user_type_id not in [1, 2, 3, 4]:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    return await service.find_students(
-        name=name,
-        document=document,
-        email=email,
-        phoneNumber=phoneNumber,
-        active=active,
-        page=page,
-        page_size=page_size
-    )
-
-
-@router.get("/{user_id}", response_model=UserViewModel)
+@router.get("/{user_id}", response_model=User)
 async def get_user(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -213,20 +172,20 @@ async def get_user(
     - Staff can view any user
     - Users can view themselves
     """
-    user = await service.get_by_id(user_id)
+    user: User | None = await service.get_by_id(user_id)
+
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Só pode ver seu próprio perfil")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     return user
 
-
-@router.put("/{user_id}", response_model=UserViewModel)
+@router.put("/{user_id}", response_model=User)
 async def update_user(
     user_id: UUID,
-    dto: UserUpdateDTO,
+    dto: UserUpdate,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
 ):
@@ -236,21 +195,22 @@ async def update_user(
     - Users can update themselves
     """
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Só pode atualizar seu próprio perfil")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        user = await service.update_user(user_id, dto)
+        user: User | None = await service.update_user(user_id, dto)
+
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
         return user
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.patch("/{user_id}/password")
 async def change_password(
     user_id: UUID,
-    dto: PasswordChangeDTO,
+    dto: PasswordChange,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
 ):
@@ -262,7 +222,8 @@ async def change_password(
         raise HTTPException(status_code=403, detail="Só pode alterar sua própria senha")
     
     try:
-        result = await service.change_password(user_id, dto)
+        result: bool = await service.change_password(user_id, dto)
+
         return {"message": "Senha alterada com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

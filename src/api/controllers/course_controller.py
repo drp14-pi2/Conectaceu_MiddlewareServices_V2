@@ -8,9 +8,8 @@ from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.course_dto import CourseCreateDTO, CourseUpdateDTO, CourseFilterDTO
-from src.domain.view_models.course_view_model import CourseViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.course import Course, CourseCreate
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/course",
@@ -18,27 +17,27 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_course_service(db: Session = Depends(get_db)) -> CourseService:
     """Dependency injection for CourseService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)
+
     return CourseService(course_repo, component_repo)
 
-
-@router.post("/", response_model=CourseViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Course, status_code=status.HTTP_201_CREATED)
 async def create_course(
     request: Request,
-    dto: CourseCreateDTO,
+    dto: CourseCreate,
     current_user: User = Depends(get_current_active_user),
     service: CourseService = Depends(get_course_service)
 ):
     """Create a new course with components. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can create courses")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        user_ip = request.client.host if request.client else "unknown"
+        user_ip: str = request.client.host if request.client else "unknown"
+
         return await service.create_course(
             dto,
             created_by_user_id=current_user.id,
@@ -46,7 +45,6 @@ async def create_course(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.patch("/{course_id}/deactivate")
 async def deactivate_course(
@@ -56,14 +54,14 @@ async def deactivate_course(
 ):
     """Deactivate a course. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can deactivate courses")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        result = await service.deactivate_course(course_id)
-        return result
+        result: bool = await service.deactivate_course(course_id)
+
+        return {'message': 'Curso desativado com sucesso', 'success': result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.patch("/{course_id}/activate")
 async def activate_course(
@@ -73,16 +71,16 @@ async def activate_course(
 ):
     """Activate a course. Admin (1), Coordinator (3), Educator (4) only."""
     if current_user.user_type_id not in [1, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only admins, coordinators, and educators can activate courses")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        result = await service.activate_course(course_id)
-        return {"message": "Course activated successfully", "success": result}
+        result: bool = await service.activate_course(course_id)
+
+        return {"message": "Curso ativado com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.get("/", response_model=list[CourseViewModel])
+@router.get("/", response_model=list[Course])
 async def list_courses(
     name: str = Query(None),
     active: bool = Query(None),
@@ -93,7 +91,7 @@ async def list_courses(
     service: CourseService = Depends(get_course_service)
 ):
     """List courses with filters."""
-    filters = CourseFilterDTO(
+    return await service.find_courses(
         name=name,
         active=active,
         educator_id=str(educator_id) if educator_id else None,
@@ -101,22 +99,21 @@ async def list_courses(
         page=page,
         page_size=page_size
     )
-    return await service.find_courses(**filters.model_dump(exclude_none=True))
 
-
-@router.get("/{course_id}", response_model=CourseViewModel)
+@router.get("/{course_id}", response_model=Course)
 async def get_course(
     course_id: UUID,
     service: CourseService = Depends(get_course_service)
 ):
     """Get course by ID."""
-    course = await service.get_by_id(course_id)
+    course: Course | None = await service.get_by_id(course_id)
+
     if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+        raise HTTPException(status_code=404, detail="Curso não encontrado")
+    
     return course
 
-
-@router.get("/{course_id}/components", response_model=CourseViewModel)
+@router.get("/{course_id}/components", response_model=Course)
 async def get_course_with_components(
     course_id: UUID,
     service: CourseService = Depends(get_course_service)

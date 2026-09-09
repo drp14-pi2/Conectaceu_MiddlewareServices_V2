@@ -10,19 +10,18 @@ from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
 from src.domain.constants.permission_types import PermissionTypes
+from src.domain.schemas.broadcast_message import BroadcastMessageCreate
+from src.domain.schemas.user import User
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.messaging.sms.sms_service import SmsService
 from src.infrastructure.messaging.whatsapp.whatsapp_service import WhatsAppService
 from src.data.db_context.database import get_db
-from src.domain.dtos.broadcast_message_dto import BroadcastMessageCreateDTO
-from src.domain.entities.user import User
 
 router = APIRouter(
     prefix="/broadcast",
     tags=["Broadcasts"],
     dependencies=[Depends(get_current_active_user)]
 )
-
 
 def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
     """Dependency injection for BroadcastService"""
@@ -50,7 +49,7 @@ def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
 @router.post("/", status_code=status.HTTP_200_OK)
 async def send_broadcast(
     request: Request,
-    dto: BroadcastMessageCreateDTO,
+    dto: BroadcastMessageCreate,
     current_user: User = Depends(require_permission(PermissionTypes.SEND_BROADCAST_MESSAGE)),
     service: BroadcastService = Depends(get_broadcast_service)
 ):
@@ -59,8 +58,8 @@ async def send_broadcast(
     Requires: send_broadcast_message permission (Admin/Secretary only).
     """
     try:
-        user_ip = request.client.host if request.client else "unknown"
-        result = await service.send_broadcast(dto, current_user.id, user_ip)
-        return result
+        user_ip: str = request.client.host if request.client else "unknown"
+
+        return await service.send_broadcast(dto, current_user.id, user_ip)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

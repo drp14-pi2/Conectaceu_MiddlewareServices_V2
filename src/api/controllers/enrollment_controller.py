@@ -1,4 +1,5 @@
 """User course enrollment controller"""
+from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,9 +10,8 @@ from src.data.repositories.enrollment_waiting_list_repository import EnrollmentW
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.dtos.user_course_dto import UserCourseEnrollDTO, UserCourseBulkEnrollDTO
-from src.domain.view_models.user_course_view_model import UserCourseViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.user import User
+from src.domain.schemas.user_course import UserCourse, UserCourseBulkCreate, UserCourseCreate
 
 router = APIRouter(
     prefix="/enrollment",
@@ -19,25 +19,25 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_user_course_service(db: Session = Depends(get_db)) -> UserCourseService:
     """Dependency injection for UserCourseService"""
     repository = UserCourseRepository(db)
     course_repo = CourseRepository(db)
     waiting_list_repo = EnrollmentWaitingListRepository(db)
+
     return UserCourseService(repository, course_repo, waiting_list_repo)
 
-
-@router.post("/", response_model=UserCourseViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserCourse, status_code=status.HTTP_201_CREATED)
 async def enroll_user(
     request: Request,
-    dto: UserCourseEnrollDTO,
+    dto: UserCourseCreate,
     current_user: User = Depends(get_current_active_user),
     service: UserCourseService = Depends(get_user_course_service)
 ):
     """Enroll a user in a class."""
     try:
-        user_ip = request.client.host if request.client else "unknown"
+        user_ip: str = request.client.host if request.client else "unknown"
+
         return await service.enroll_user(
             dto,
             enrolled_by_user_id=current_user.id,
@@ -46,10 +46,9 @@ async def enroll_user(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.post("/bulk")
 async def bulk_enroll(
-    dto: UserCourseBulkEnrollDTO,
+    dto: UserCourseBulkCreate,
     current_user: User = Depends(get_current_active_user),
     service: UserCourseService = Depends(get_user_course_service)
 ):
@@ -58,12 +57,11 @@ async def bulk_enroll(
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
     if current_user.user_type_id not in [1, 2, 3, 4]:
-        raise HTTPException(status_code=403, detail="Only staff can bulk enroll students")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     return await service.bulk_enroll(dto)
 
-
-@router.get("/user/{user_id}", response_model=list[UserCourseViewModel])
+@router.get("/user/{user_id}", response_model=list[UserCourse])
 async def get_user_enrollments(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -75,10 +73,9 @@ async def get_user_enrollments(
     - Users can view their own
     """
     if current_user.user_type_id not in [1, 2, 3, 4] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own enrollments")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     return await service.get_user_enrollments(user_id)
-
 
 @router.get("/user/{user_id}/summary")
 async def get_enrollment_summary(
@@ -92,12 +89,11 @@ async def get_enrollment_summary(
     - Users can view their own
     """
     if current_user.user_type_id not in [1, 2, 3, 4] and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Can only view your own summary")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     return await service.get_enrollment_summary(user_id)
 
-
-@router.get("/course/{course_id}", response_model=list[UserCourseViewModel])
+@router.get("/course/{course_id}", response_model=List[UserCourse])
 async def get_course_enrollments(
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -108,10 +104,9 @@ async def get_course_enrollments(
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
     if current_user.user_type_id == 5:
-        raise HTTPException(status_code=403, detail="Only staff can view class enrollments")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
-    return await service.get_course_enrollments(course_id)
-
+    return await service.get_active_course_enrollments(course_id)
 
 @router.patch("/{enrollment_id}/unenroll")
 async def unenroll_user(
@@ -122,12 +117,13 @@ async def unenroll_user(
 ):
     """Unenroll a user from a class."""
     try:
-        user_ip = request.client.host if request.client else "unknown"
-        result = await service.unenroll_user(
+        user_ip: str = request.client.host if request.client else "unknown"
+        result: bool = await service.unenroll_user(
             enrollment_id,
             unenrolled_by_user_id=current_user.id,
             user_ip_address=user_ip
         )
-        return {"message": "User unenrolled successfully", "success": result}
+
+        return {"message": "Matrícula cancelada com sucesso", "success": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

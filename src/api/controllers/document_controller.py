@@ -13,11 +13,9 @@ from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
-from src.domain.dtos.document_dto import DocumentCreateDTO
-from src.domain.dtos.document_validation_dto import DocumentValidationDTO
-from src.domain.view_models.document_validation_view_model import DocumentValidationViewModel
-from src.domain.view_models.document_view_model import DocumentViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.document import Document, DocumentCreate
+from src.domain.schemas.document_validation import DocumentValidation, DocumentValidationInput
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/document",
@@ -25,25 +23,24 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
     """Dependency injection for DocumentService"""
     repository = DocumentRepository(db)
     user_repo = UserRepository(db)
     address_repo = AddressRepository(db)
+
     return DocumentService(repository, user_repo, address_repo)
-    
-    
+
 def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationService:
     """Dependency injection for DocumentValidationService"""
     repository = DocumentValidationRepository(db)
     representative_repo = LegalRepresentativeRepository(db)
+
     return DocumentValidationService(repository, representative_repo)
 
-
-@router.post("/", response_model=DocumentViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Document, status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    dto: DocumentCreateDTO,
+    dto: DocumentCreate,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
 ):
@@ -52,12 +49,12 @@ async def upload_document(
         # Students can only upload their own documents
         if current_user.user_type_id == 5 and dto.user_id and current_user.id != dto.user_id:
             ValueError('Só pode enviar seus próprios documentos')
+
         return await service.upload_document(dto)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.get("/user/{user_id}", response_model=List[DocumentViewModel])
+@router.get("/user/{user_id}", response_model=List[Document])
 async def get_user_documents(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -73,8 +70,7 @@ async def get_user_documents(
     
     return await service.get_user_documents(user_id)
 
-
-@router.get("/{document_id}", response_model=DocumentViewModel)
+@router.get("/{document_id}", response_model=Document)
 async def get_document(
     request: Request,
     document_id: UUID,
@@ -82,8 +78,9 @@ async def get_document(
     service: DocumentService = Depends(get_document_service)
 ):
     """Get document by ID."""
-    user_ip = request.client.host if request.client else "unknown"
-    document = await service.get_document_by_id(document_id, current_user.id, user_ip)
+    user_ip: str = request.client.host if request.client else "unknown"
+    document: Document | None = await service.get_document_by_id(document_id, current_user.id, user_ip)
+
     if not document:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
@@ -92,7 +89,7 @@ async def get_document(
     
     return document
 
-@router.get("/user/{user_id}/type/{document_type_id}", response_model=List[DocumentViewModel])
+@router.get("/user/{user_id}/type/{document_type_id}", response_model=List[Document])
 async def get_document_by_type(
     request: Request,
     user_id: UUID,
@@ -101,8 +98,9 @@ async def get_document_by_type(
     service: DocumentService = Depends(get_document_service)
 ):
     """Get document by type."""
-    user_ip = request.client.host if request.client else "unknown"
-    documents = await service.get_documents_by_type(user_id, document_type_id, current_user.id, user_ip)
+    user_ip: str = request.client.host if request.client else "unknown"
+    documents: List[Document] = await service.get_documents_by_type(user_id, document_type_id, current_user.id, user_ip)
+
     if not documents:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
@@ -123,7 +121,7 @@ async def get_management_document_template(
     if current_user.user_type_id == 5:
         raise HTTPException(status_code=403, detail="Só equipe pode consultar estes documentos")
     
-    document: dict = await service.get_management_document_template(document_type_id, component_id, month)
+    document: dict[str, str] | None = await service.get_management_document_template(document_type_id, component_id, month)
 
     if not document:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
@@ -131,10 +129,10 @@ async def get_management_document_template(
     return document
 
 # Document validation
-@router.put("/validate", response_model=DocumentValidationViewModel)
+@router.put("/validate", response_model=DocumentValidation)
 async def validate_document(
     request: Request,
-    dto: DocumentValidationDTO,
+    dto: DocumentValidationInput,
     current_user: User = Depends(get_current_active_user),
     service: DocumentValidationService = Depends(get_validation_service)
 ):
@@ -143,10 +141,11 @@ async def validate_document(
     Admin (1) and Secretary (2) only.
     """
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can validate documents")
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        user_ip = request.client.host if request.client else "unknown"
+        user_ip: str = request.client.host if request.client else "unknown"
+
         return await service.create_or_update_validation(
             dto=dto,
             performed_by_user_id=current_user.id,
@@ -155,8 +154,7 @@ async def validate_document(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.get("/validate/pending", response_model=list[DocumentValidationViewModel])
+@router.get("/validate/pending", response_model=list[DocumentValidation])
 async def get_pending_validations(
     skip: int = 0,
     limit: int = 100,
@@ -165,5 +163,6 @@ async def get_pending_validations(
 ):
     """Get pending document validations."""
     if current_user.user_type_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="Only administrators and secretaries can list documents")
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
     return await service.get_pending_validations(skip, limit)

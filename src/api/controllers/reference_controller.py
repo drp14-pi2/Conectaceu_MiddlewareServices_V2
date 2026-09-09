@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from src.application.mappers.reference_mapper import ReferenceMapper
 from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.user_sex_type_repository import UserSexTypeRepository
 from src.data.repositories.user_gender_type_repository import UserGenderTypeRepository
@@ -12,7 +13,6 @@ from src.data.repositories.shift_type_repository import ShiftTypeRepository
 from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.application.mappers.model_to_view_model_mapper import ModelToViewModelMapper
 
 router = APIRouter(
     prefix="/reference",
@@ -20,90 +20,90 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
-# ========== Sex Types ==========
+# Sex Types
 @router.get("/sex-types")
 async def get_sex_types(db: Session = Depends(get_db)):
     """Get all sex types"""
     repo = UserSexTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.user_sex_type(m) for m in models]
+    result = [ReferenceMapper.user_sex_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Gender Types ==========
+# Gender Types
 @router.get("/gender-types")
 async def get_gender_types(db: Session = Depends(get_db)):
     """Get all gender types"""
     repo = UserGenderTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.user_gender_type(m) for m in models]
+    result = [ReferenceMapper.user_gender_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== User Types ==========
+# User Types
 @router.get("/user-types")
 async def get_user_types(db: Session = Depends(get_db)):
     """Get all user types"""
     repo = UserTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.user_type(m) for m in models]
+    result = [ReferenceMapper.user_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Legal Representative Degrees ==========
+# Legal Representative Degrees
 @router.get("/legal-representative-degrees")
 async def get_legal_representative_degrees(db: Session = Depends(get_db)):
     """Get all legal representative degrees"""
     repo = LegalRepresentativeDegreeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.legal_representative_degree(m) for m in models]
+    result = [ReferenceMapper.legal_representative_degree_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Document Types ==========
+# Document Types
 @router.get("/document-types")
 async def get_document_types(db: Session = Depends(get_db)):
     """Get all document types"""
     repo = DocumentTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.document_type(m) for m in models]
+    result = [ReferenceMapper.document_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Validation Status Types ==========
+# Validation Status Types
 @router.get("/validation-status-types")
 async def get_validation_status_types(db: Session = Depends(get_db)):
     """Get all validation status types"""
     repo = DocumentValidationStatusTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.document_validation_status_type(m) for m in models]
+    result = [ReferenceMapper.document_validation_status_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Shift Types ==========
+# Shift Types
 @router.get("/shift-types")
 async def get_shift_types(db: Session = Depends(get_db)):
     """Get all shift types"""
     repo = ShiftTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.shift_type(m) for m in models]
+    result = [ReferenceMapper.shift_type_model_to_schema(m) for m in models]
     result.sort(key=lambda x: x.id)
+
     return result
 
-
-# ========== Report Types ==========
+# Report Types
 @router.get("/report-types")
 async def get_report_types(db: Session = Depends(get_db)):
     """Get all report types"""
     repo = ReportTypeRepository(db)
     models = await repo.get_all()
-    result = [ModelToViewModelMapper.report_type(m) for m in models]
-    result.sort(key=lambda x: x.id);
+    result = [ReferenceMapper.report_type_model_to_schema(m) for m in models]
+    result.sort(key=lambda x: x.id)
+
     return result

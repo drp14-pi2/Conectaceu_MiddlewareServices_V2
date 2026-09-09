@@ -27,7 +27,7 @@ class PasswordResetService:
         self.password_history_service = password_history_service
         self.email_service = email_service
     
-    async def request_password_reset(self, body: PasswordResetRequest) -> dict:
+    async def request_password_reset(self, body: PasswordResetRequest) -> dict[str, str]:
         """
         Request password reset by email.
         Generates reset token and sends email.
@@ -98,7 +98,7 @@ class PasswordResetService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def reset_password(self, token: str, new_password: str) -> dict:
+    async def reset_password(self, token: str, new_password: str) -> dict[str, Any]:
         """
         Reset password using token.
         

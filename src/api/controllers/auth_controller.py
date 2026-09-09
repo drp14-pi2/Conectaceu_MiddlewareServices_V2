@@ -1,4 +1,6 @@
 """Authentication controller"""
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
@@ -15,8 +17,8 @@ from src.data.repositories.user_repository import UserRepository
 from src.data.db_context.database import get_db
 from sqlalchemy.orm import Session
 
-from src.domain.dtos.auth_dto import LoginDTO
-from src.domain.dtos.user_dto import UserCreateDTO
+from src.domain.schemas.auth import Login
+from src.domain.schemas.user import User, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -24,6 +26,7 @@ security = HTTPBearer()
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     user_repo = UserRepository(db)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+
     return AuthService(user_repo, profiles_to_exclude_repo)
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
@@ -36,6 +39,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     legal_rep_repo = LegalRepresentativeRepository(db)
     doc_validation_repo = DocumentValidationRepository(db)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+
     return UserService(
         user_repo,
         password_history_service,
@@ -48,16 +52,16 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 
 @router.post("/login")
 async def login(
-    body: LoginDTO,
+    body: Login,
     service: AuthService = Depends(get_auth_service)
 ):
     """Authenticate user and return tokens"""
-    result = await service.authenticate(body)
+    result: dict[str, Any] | None = await service.authenticate(body)
     
     if not result:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            detail="Credenciais inválidas"
         )
     
     return result
@@ -68,7 +72,7 @@ async def refresh_token(
     service: AuthService = Depends(get_auth_service)
 ):
     """Refresh access token"""
-    result = await service.refresh_access_token(refresh_token)
+    result: dict[str, Any] | None = await service.refresh_access_token(refresh_token)
     
     if not result:
         raise HTTPException(
@@ -80,7 +84,7 @@ async def refresh_token(
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def public_register(
-    dto: UserCreateDTO,
+    dto: UserCreate,
     service: UserService = Depends(get_user_service)
 ):
     """
@@ -88,7 +92,7 @@ async def public_register(
     Documents need validation by a Secretary.
     """
     try:
-        user = await service.create_user(
+        user: User = await service.create_user(
             dto,
             created_by_user_id=None  # Public registration
         )

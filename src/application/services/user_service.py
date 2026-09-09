@@ -9,9 +9,6 @@ from src.application.mappers.user_mapper import UserMapper
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.user_model import UserModel
-from src.data.repositories.document_repository import DocumentRepository
-from src.data.repositories.document_validation_repository import DocumentValidationRepository
-from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
@@ -28,17 +25,11 @@ class UserService(BaseService):
         self,
         repository: UserRepository,
         password_history_service: UserPasswordHistoryService,
-        document_repo: DocumentRepository,
-        legal_rep_repo: LegalRepresentativeRepository,
-        doc_validation_repo: DocumentValidationRepository,
         profiles_to_exclude_repo: ProfilesToExcludeRepository
     ):
         super().__init__(repository, 'user', mapper_class=UserMapper)
         self.repository = repository
         self.password_history_service = password_history_service
-        self.document_repo = document_repo
-        self.legal_rep_repo = legal_rep_repo
-        self.doc_validation_repo = doc_validation_repo
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
     async def create_user(

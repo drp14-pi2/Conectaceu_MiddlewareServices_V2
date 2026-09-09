@@ -11,9 +11,8 @@ from src.data.repositories.legal_representative_repository import LegalRepresent
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.data.repositories.user_repository import UserRepository
-from src.domain.dtos.legal_representative_dto import LegalRepresentativeCreateDTO, LegalRepresentativeUpdateDTO
-from src.domain.view_models.legal_representative_view_model import LegalRepresentativeViewModel
-from src.domain.entities.user import User
+from src.domain.schemas.legal_representative import LegalRepresentative, LegalRepresentativeCreate, LegalRepresentativeUpdate
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/representative",
@@ -21,19 +20,18 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-
 def get_representative_service(db: Session = Depends(get_db)) -> LegalRepresentativeService:
     """Dependency injection for LegalRepresentativeService"""
     repository = LegalRepresentativeRepository(db)
     document_repo = DocumentRepository(db)
     document_validation_repo = DocumentValidationRepository(db)
     user_repo = UserRepository(db)
+
     return LegalRepresentativeService(repository, document_repo, document_validation_repo, user_repo)
 
-
-@router.post("/", response_model=LegalRepresentativeViewModel, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=LegalRepresentative, status_code=status.HTTP_201_CREATED)
 async def create_representative(
-    dto: LegalRepresentativeCreateDTO,
+    dto: LegalRepresentativeCreate,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
@@ -46,11 +44,10 @@ async def create_representative(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.put("/{representative_id}", response_model=LegalRepresentativeViewModel)
+@router.put("/{representative_id}", response_model=LegalRepresentative)
 async def update_representative(
     representative_id: UUID,
-    dto: LegalRepresentativeUpdateDTO,
+    dto: LegalRepresentativeUpdate,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
@@ -59,13 +56,14 @@ async def update_representative(
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
-        representative = await service.update_representative(representative_id, dto)
+        representative: LegalRepresentative | None = await service.update_representative(representative_id, dto)
+
         if not representative:
             raise HTTPException(status_code=404, detail="Representante legal não encontrado")
+        
         return representative
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.delete("/{representative_id}")
 async def delete_representative(
@@ -77,13 +75,14 @@ async def delete_representative(
     if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    deleted = await service.delete_representative(representative_id)
-    if not deleted:
+    result: bool = await service.delete_representative(representative_id)
+
+    if not result:
         raise HTTPException(status_code=404, detail="Representante não pôde ser excluído")
+    
     return {"message": "Representante excluído com sucesso"}
 
-
-@router.get("/user/{user_id}", response_model=List[LegalRepresentativeViewModel])
+@router.get("/user/{user_id}", response_model=List[LegalRepresentative])
 async def get_user_representatives(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -99,15 +98,15 @@ async def get_user_representatives(
     
     return await service.get_user_representatives(user_id)
 
-
-@router.get("/{representative_id}", response_model=LegalRepresentativeViewModel)
+@router.get("/{representative_id}", response_model=LegalRepresentative)
 async def get_representative(
     representative_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
     """Get representative by ID."""
-    representative = await service.get_by_id(representative_id)
+    representative: LegalRepresentative | None = await service.get_by_id(representative_id)
+
     if not representative:
         raise HTTPException(status_code=404, detail="Representante não encontrado")
     

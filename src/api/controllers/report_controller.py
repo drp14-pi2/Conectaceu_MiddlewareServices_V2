@@ -13,14 +13,13 @@ from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.log_report_request_repository import LogReportRequestRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.entities.user import User
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/report",
     tags=["Report"],
     dependencies=[Depends(get_current_active_user)]
 )
-
 
 def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     """Dependency injection for ReportService"""
@@ -30,6 +29,7 @@ def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     user_repo = UserRepository(db)
     class_repo = ClassRepository(db)
     log_report_repo = LogReportRequestRepository(db)
+
     return ReportService(
         course_repo,
         component_repo,
@@ -38,7 +38,6 @@ def get_report_service(db: Session = Depends(get_db)) -> ReportService:
         class_repo,
         log_report_repo
     )
-
 
 @router.get("/students-by-course")
 async def get_students_by_course(
@@ -49,14 +48,14 @@ async def get_students_by_course(
     service: ReportService = Depends(get_report_service)
 ):
     """Get students enrolled by course and/or component"""
-    user_ip = request.client.host if request.client else "unknown"
+    user_ip: str = request.client.host if request.client else "unknown"
+
     return await service.get_students_by_course(
         course_id=course_id,
         component_id=component_id,
         requested_by_user_id=current_user.id,
         user_ip_address=user_ip
     )
-
 
 @router.get("/course-vacancies")
 async def get_course_vacancies(
@@ -66,7 +65,8 @@ async def get_course_vacancies(
     service: ReportService = Depends(get_report_service)
 ):
     """Get vacancies by course"""
-    user_ip = request.client.host if request.client else "unknown"
+    user_ip: str = request.client.host if request.client else "unknown"
+    
     return await service.get_course_vacancies(
         course_id=course_id,
         requested_by_user_id=current_user.id,
