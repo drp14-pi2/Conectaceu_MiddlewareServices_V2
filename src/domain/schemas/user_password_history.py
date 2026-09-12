@@ -14,8 +14,9 @@ class UserPasswordHistoryBase(BaseModel):
 class UserPasswordHistory(UserPasswordHistoryBase):
     pass
 
-class UserPasswordHistoryCreate(UserPasswordHistoryBase):
-    pass
+class UserPasswordHistoryCreate(BaseModel):
+    password: str
+    user_id: UUID
 
 class PasswordChange(BaseModel):
     new_password: str

@@ -45,7 +45,7 @@ class User(UserBase):
     updated_at: Optional[datetime] = None
     user_type_id: int
     active: bool
-    email_verified: bool = False
+    email_verified: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 

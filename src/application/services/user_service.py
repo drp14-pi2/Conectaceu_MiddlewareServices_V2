@@ -45,6 +45,10 @@ class UserService(BaseService):
             created_by_user_id: ID of the user creating this account (None for public registration)
         """
         try:
+            # Blocks administrator user creation
+            if dto.user_type_id == 1:
+                raise ValueError('Não é permitido criar esse tipo de usuário')
+
             # Normalize fields
             dto.document = re.sub(r'\D', '', dto.document)
             dto.name = dto.name.title()
@@ -87,6 +91,7 @@ class UserService(BaseService):
                     raise ValueError("Este usuário não pode criar outros usuários")
                 
                 is_creator_admin_or_secretary = True
+
             # Create User
             model: UserModel = UserMapper.create_to_model(dto)
             is_creating_student = model.user_type_id == 5
@@ -273,7 +278,7 @@ class UserService(BaseService):
         active: Optional[bool] = None,
         page: int = 1,
         page_size: int = 10
-    ) -> dict:
+    ) -> List[User]:
         """Find users with filters and pagination"""
         try:
             skip: int = (page - 1) * page_size

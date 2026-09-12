@@ -70,10 +70,8 @@ class UserPasswordHistoryService(BaseService):
 
             if not is_password_hashed:
                 hashed_password = PasswordHasher.hash_password(hashed_password)
-            
+
             dto: UserPasswordHistoryCreate = UserPasswordHistoryCreate(
-                id=uuid4(),
-                created_at=DateTimeHandler.now(),
                 password=hashed_password,
                 user_id=user_id
             )
