@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
-from document import DocumentCreate
+from src.domain.schemas.document import DocumentCreate
 
 class StudentAbsenceJustificationCreate(BaseModel):
     class_attendance_id: UUID

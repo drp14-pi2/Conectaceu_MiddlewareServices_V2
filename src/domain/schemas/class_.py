@@ -1,9 +1,8 @@
 """Class schemas"""
-from dataclasses import Field
 from datetime import datetime
 from uuid import UUID
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class ClassBase(BaseModel):
     course_component_id: UUID
@@ -32,14 +31,17 @@ class ClassBulkCreate(BaseModel):
     def end_after_start(cls, v, info):
         if 'start_date' in info.data and v < info.data['start_date']:
             raise ValueError('Data final deve ser posterior à data inicial')
+        
         return v
     
     @field_validator('days_of_week')
     def days_received_in_range(cls, v):
         valid_days = {0, 1, 2, 3, 4, 5, 6}
+
         for day in v:
             if day not in valid_days:
                 raise ValueError(f'{day} não é um dia da semana válido (0-6)')
+            
         return v
 
 class ClassUpdate(BaseModel):

@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
-from course_component import CourseComponent
+from src.domain.schemas.course_component import CourseComponent
 
 class CourseBase(BaseModel):
     name: str = Field(min_length=3, max_length=100)

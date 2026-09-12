@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
-from document import Document
+from src.domain.schemas.document import Document
 
 class DocumentValidationInput(BaseModel):
     document_id: UUID

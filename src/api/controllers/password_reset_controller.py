@@ -9,7 +9,7 @@ from src.application.services.user_password_history_service import UserPasswordH
 from src.data.db_context.database import get_db
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.user_repository import UserRepository
-from src.domain.schemas import PasswordResetRequest
+from src.domain.schemas.password_reset import PasswordResetRequest
 from src.domain.schemas.password_reset import PasswordResetRequest, PasswordResetSubmit
 from src.infrastructure.messaging.email.email_service import EmailService
 

@@ -7,16 +7,15 @@ from src.application.services.auth_service import AuthService
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_type_repository import UserTypeRepository
 from src.data.db_context.database import get_db
-from src.domain.entities.user import User
+from src.domain.schemas.user import User
 
 security = HTTPBearer()
-
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     """Get AuthService instance"""
     user_repo = UserRepository(db)
+    
     return AuthService(user_repo)
-
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -34,7 +33,6 @@ async def get_current_user(
     
     return user
 
-
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
@@ -44,8 +42,8 @@ async def get_current_active_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated"
         )
+    
     return current_user
-
 
 def require_permission(*permissions: str):
     """
@@ -75,7 +73,6 @@ def require_permission(*permissions: str):
         return current_user
     
     return permission_checker
-
 
 def require_role(*roles: int):
     """
