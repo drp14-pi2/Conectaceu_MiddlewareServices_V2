@@ -10,6 +10,7 @@ from src.application.mappers.user_mapper import UserMapper
 from src.data.models.user_model import UserModel
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
+from src.data.repositories.log_access_repository import LogAccessRepository
 from src.domain.schemas.auth import Login
 from src.domain.schemas.user import User
 from src.infrastructure.configuration.settings import settings
@@ -21,9 +22,11 @@ class AuthService:
     def __init__(
         self,
         user_repo: UserRepository,
+        log_access_repo: LogAccessRepository,
         profiles_to_exclude_repo: ProfilesToExcludeRepository = None
     ):
         self.user_repo = user_repo
+        self.log_access_repo = log_access_repo
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
     async def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
@@ -93,7 +96,13 @@ class AuthService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def authenticate(self, body: Login) -> Optional[dict[str, Any]]:
+    async def authenticate(
+        self,
+        body: Login,
+        origin_ip_address: str,
+        user_agent: str
+
+    ) -> dict[str, Any]:
         """
         Authenticate user with document and password.
         
@@ -102,7 +111,7 @@ class AuthService:
             password: Plain text password
             
         Returns:
-            Dict with tokens if authentication successful, None otherwise
+            Dict with tokens if authentication successful, dict with failure data otherwise
         """
         try:
             # Find user by document
@@ -110,11 +119,37 @@ class AuthService:
 
             # Is user valid
             if not user or not user.active:
-                return None
+                return { 'success': False, 'message': 'Usuário não encontrado' }
             
             # Verify password
             if not await self._verify_password(body.password, user.password):
-                return None
+                response_message: str = 'Senha inválida'
+                await self._log_access(
+                    success=False,
+                    message=response_message,
+                    origin_ip_address=origin_ip_address,
+                    user_agent=user_agent,
+                    user_id=user.id
+                )
+                failed_login_attempts_timeout_minutes: int = settings.FAILED_LOGIN_ATTEMPTS_TIMEOUT_MINUTES
+
+                if await self.log_access_repo.has_exceeded_failed_attempts(
+                    minutes=failed_login_attempts_timeout_minutes,
+                    max_attempts=settings.FAILED_LOGIN_MAX_ATTEMPTS,
+                    user_id=user.id,
+                ):
+                    response_message = f'Limite de tentativas de login excedido. Tente novamente em {failed_login_attempts_timeout_minutes} minutos'
+                    await self._log_access(
+                        success=False,
+                        message=response_message,
+                        origin_ip_address=origin_ip_address,
+                        user_agent=user_agent,
+                        user_id=user.id
+                    )
+                    
+                self.user_repo.session.commit()
+
+                return { 'success': False, 'message': response_message }
             
             # Generate tokens
             user_uuid: UUID = user.id
@@ -131,8 +166,8 @@ class AuthService:
                 # Log reactivation
                 from src.data.repositories.log_user_activation_repository import LogUserActivationRepository
 
-                log_repo: LogUserActivationRepository = LogUserActivationRepository(self.user_repo.session)
-                await log_repo.log(
+                log_user_activation_repo: LogUserActivationRepository = LogUserActivationRepository(self.user_repo.session)
+                await log_user_activation_repo.log(
                     deactivation_reason=None,
                     activated=True,
                     user_id=user.id,
@@ -143,6 +178,14 @@ class AuthService:
 
             access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
             refresh_token: str = await self.create_refresh_token(user_uuid)
+            await self._log_access(
+                success=True,
+                message='Sucesso',
+                origin_ip_address=origin_ip_address,
+                user_agent=user_agent,
+                user_id=user.id
+            )
+            self.user_repo.session.commit()
             
             return {
                 "access_token": access_token,
@@ -214,3 +257,23 @@ class AuthService:
             plain_password.encode('utf-8'),
             hashed_password.encode('utf-8')
         )
+
+    async def _log_access(
+        self,
+        success: bool,
+        message: str,
+        origin_ip_address: str,
+        user_agent: str,
+        user_id: UUID
+    ) -> None:
+        try:
+            log_repo: LogAccessRepository = LogAccessRepository(self.user_repo.session)
+            await log_repo.log(
+                success=success,
+                message=message,
+                origin_ip_address=origin_ip_address,
+                user_agent=user_agent,
+                user_id=user_id
+            )
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)

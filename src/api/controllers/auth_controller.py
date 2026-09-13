@@ -1,12 +1,13 @@
 """Authentication controller"""
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer
 
 from src.application.services.auth_service import AuthService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.application.services.user_service import UserService
+from src.data.repositories.log_access_repository import LogAccessRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.user_repository import UserRepository
@@ -21,9 +22,10 @@ security = HTTPBearer()
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     user_repo = UserRepository(db)
+    log_access_log = LogAccessRepository(db)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
 
-    return AuthService(user_repo, profiles_to_exclude_repo)
+    return AuthService(user_repo, log_access_log, profiles_to_exclude_repo)
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     """Dependency injection for UserService"""
@@ -40,16 +42,22 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 
 @router.post("/login")
 async def login(
+    request: Request,
     body: Login,
     service: AuthService = Depends(get_auth_service)
 ):
     """Authenticate user and return tokens"""
-    result: dict[str, Any] | None = await service.authenticate(body)
+    user_ip: str = request.client.host if request.client else "unknown"
+    user_agent: str = request.headers.get("user-agent", "unknown")
+    result: dict[str, Any] | None = await service.authenticate(
+        body,
+        origin_ip_address=user_ip,
+        user_agent=user_agent)
     
-    if not result:
+    if not result['access_token']:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas"
+            detail=result['message']
         )
     
     return result

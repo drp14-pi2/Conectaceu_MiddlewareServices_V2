@@ -27,6 +27,7 @@ from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 
 # Log repositories
+from src.data.repositories.log_access_repository import LogAccessRepository
 from src.data.repositories.log_application_error_repository import LogApplicationErrorRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
 from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
@@ -72,6 +73,7 @@ class DatabaseContext:
         self.enrollment_waiting_list = EnrollmentWaitingListRepository(self.session)
         
         # Log repositories
+        self.log_accesses = LogAccessRepository(self.session)
         self.log_application_errors = LogApplicationErrorRepository(self.session)
         self.log_broadcast_messages = LogBroadcastMessageRepository(self.session)
         self.log_course_creations = LogCourseCreationRepository(self.session)

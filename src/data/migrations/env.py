@@ -39,6 +39,7 @@ from src.data.models.student_absence_justification_model import StudentAbsenceJu
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 
 # Log models
+from src.data.models.log_access_model import LogAccessModel
 from src.data.models.log_application_error_model import LogApplicationErrorModel
 from src.data.models.log_broadcast_message_model import LogBroadcastMessageModel
 from src.data.models.log_course_creation_model import LogCourseCreationModel

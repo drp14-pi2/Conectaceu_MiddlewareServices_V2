@@ -56,8 +56,12 @@ class AppSettings(BaseSettings):
     WHATSAPP_PHONE_NUMBER: str = Field(default="")
     WHATSAPP_ACCESS_TOKEN: str = Field(default="")
     WHATSAPP_FROM_NUMBER: str = Field(default="")
-    
+
     BATCH_SIZE: int = Field(default=25)
+
+    # Failed login attempts
+    FAILED_LOGIN_MAX_ATTEMPTS: int = Field(default = 5)
+    FAILED_LOGIN_ATTEMPTS_TIMEOUT_MINUTES: int = Field(default = 10)
 
     # Student deactivation base on unjustified absences
     ABSENCE_DAYS: int = Field(default=7)
