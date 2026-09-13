@@ -1,14 +1,14 @@
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.repositories.base.base_repository import BaseRepository
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
 class ProfilesToExcludeRepository(BaseRepository):
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, ProfilesToExcludeModel)
 
     async def get_by_user_id(self, user_id: UUID) -> Optional[ProfilesToExcludeModel]:
@@ -16,7 +16,7 @@ class ProfilesToExcludeRepository(BaseRepository):
         stmt = select(ProfilesToExcludeModel).where(
             ProfilesToExcludeModel.user_id == user_id
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_active_exclusions(self, skip: int = 0, limit: int = 100) -> List[ProfilesToExcludeModel]:
@@ -29,15 +29,15 @@ class ProfilesToExcludeRepository(BaseRepository):
             ProfilesToExcludeModel.created_at > cutoff
         ).offset(skip).limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def delete_exclusion(self, user_id: UUID) -> bool:
         """Remove a user from the exclusion list."""
         exclusion = await self.get_by_user_id(user_id)
         if exclusion:
-            self.session.delete(exclusion)
-            self.session.flush()
+            await self.session.delete(exclusion)
+            await self.session.flush()
             return True
         return False
 

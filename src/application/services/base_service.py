@@ -51,13 +51,13 @@ class BaseService:
     
     async def delete(self, id: UUID) -> bool:
         result = await self.repository.delete(id)
-        self.repository.session.commit()
+        await self.repository.session.commit()
 
         return bool(result)
     
     async def delete_int(self, id: int) -> bool:
         result = await self.repository.delete_int(id)
-        self.repository.session.commit()
+        await self.repository.session.commit()
         
         return bool(result)
     

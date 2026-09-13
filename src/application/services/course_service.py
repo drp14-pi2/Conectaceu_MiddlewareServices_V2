@@ -69,7 +69,7 @@ class CourseService(BaseService):
                     user_id=created_by_user_id
                 )
             
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return CourseMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -91,7 +91,7 @@ class CourseService(BaseService):
             
             updated_model: CourseModel = CourseMapper.update_model(model, dto)
             saved_model: CourseModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return CourseMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -119,7 +119,7 @@ class CourseService(BaseService):
             
             # Deactivate the course
             await self.repository.deactivate(course_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return {
                 "success": True,
@@ -141,7 +141,7 @@ class CourseService(BaseService):
                 raise ValueError("Curso já está ativado")
             
             await self.repository.activate(course_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return {
                 "success": True,

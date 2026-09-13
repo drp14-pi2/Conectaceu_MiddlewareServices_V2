@@ -1,7 +1,7 @@
 """Authentication dependencies for FastAPI"""
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.auth_service import AuthService
 from src.data.repositories.user_repository import UserRepository
@@ -11,7 +11,7 @@ from src.domain.schemas.user import User
 
 security = HTTPBearer()
 
-def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
+def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     """Get AuthService instance"""
     user_repo = UserRepository(db)
     
@@ -52,7 +52,7 @@ def require_permission(*permissions: str):
     """
     async def permission_checker(
         current_user: User = Depends(get_current_active_user),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
     ) -> User:
         user_type_repo = UserTypeRepository(db)
         user_type = await user_type_repo.get_by_id_int(current_user.user_type_id)

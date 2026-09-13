@@ -2,7 +2,7 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, Request, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.enrollment_service import EnrollmentService
 from src.data.repositories.course_repository import CourseRepository
@@ -20,7 +20,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_enrollment_service(db: Session = Depends(get_db)) -> EnrollmentService:
+def get_enrollment_service(db: AsyncSession = Depends(get_db)) -> EnrollmentService:
     """Dependency injection for UserCourseService"""
     repository = EnrollmentRepository(db)
     user_repo = UserRepository(db)

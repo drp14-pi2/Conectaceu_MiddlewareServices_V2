@@ -1,8 +1,8 @@
 """Database context"""
 from typing import AsyncGenerator, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.data.db_context.database import SessionLocal, engine
+from src.data.db_context.database import AsyncSessionLocal, engine
 from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
@@ -44,7 +44,7 @@ class DatabaseContext:
     Central database context managing sessions and repositories.
     """
     
-    def __init__(self, session: Optional[Session] = None):
+    def __init__(self, session: Optional[AsyncSession] = None):
         self._session = session
         self._owns_session = session is None
         
@@ -84,10 +84,10 @@ class DatabaseContext:
         self.log_user_activations = LogUserActivationRepository(self.session)
     
     @property
-    def session(self) -> Session:
+    def session(self) -> AsyncSession:
         """Get or create a database session"""
         if self._session is None:
-            self._session = SessionLocal()
+            self._session = AsyncSessionLocal()
         return self._session
     
     async def save_changes(self) -> None:

@@ -1,13 +1,13 @@
 from typing import Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class EnrollmentWaitingListRepository(BaseRepository):
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, EnrollmentWaitingListModel)
     
     async def get_next_in_line(self, course_id: UUID) -> Optional[EnrollmentWaitingListModel]:
@@ -18,7 +18,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
             .order_by(EnrollmentWaitingListModel.position)
             .limit(1)
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_by_user_and_course(self, user_id: UUID, course_id: UUID) -> Optional[EnrollmentWaitingListModel]:
@@ -29,7 +29,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
                 EnrollmentWaitingListModel.course_id == course_id
             )
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_last_position(self, course_id: UUID) -> int:
@@ -38,7 +38,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
             select(func.max(EnrollmentWaitingListModel.position))
             .where(EnrollmentWaitingListModel.course_id == course_id)
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         last = result.scalar()
         return last or 0
     
@@ -46,7 +46,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
         """Remove a user from the waiting list."""
         entry = await self.get_by_user_and_course(user_id, course_id)
         if entry:
-            self.session.delete(entry)
-            self.session.flush()
+            await self.session.delete(entry)
+            await self.session.flush()
             return True
         return False

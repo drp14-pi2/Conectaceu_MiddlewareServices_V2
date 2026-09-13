@@ -147,7 +147,7 @@ class AuthService:
                         user_id=user.id
                     )
                     
-                self.user_repo.session.commit()
+                await self.user_repo.session.commit()
 
                 return { 'success': False, 'message': response_message }
             
@@ -174,7 +174,7 @@ class AuthService:
                     performed_by_user_id=user.id,
                     performed_by_user_ip_address="self_login"
                 )
-                self.user_repo.session.commit()
+                await self.user_repo.session.commit()
 
             access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
             refresh_token: str = await self.create_refresh_token(user_uuid)
@@ -185,7 +185,7 @@ class AuthService:
                 user_agent=user_agent,
                 user_id=user.id
             )
-            self.user_repo.session.commit()
+            await self.user_repo.session.commit()
             
             return {
                 "access_token": access_token,

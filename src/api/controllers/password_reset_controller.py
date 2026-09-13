@@ -2,7 +2,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.password_reset_service import PasswordResetService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
@@ -15,7 +15,7 @@ from src.infrastructure.messaging.email.email_service import EmailService
 
 router = APIRouter(prefix="/password", tags=["Password Reset"])
 
-def get_password_reset_service(db: Session = Depends(get_db)) -> PasswordResetService:
+def get_password_reset_service(db: AsyncSession = Depends(get_db)) -> PasswordResetService:
     user_repo = UserRepository(db)
     user_password_history_repository = UserPasswordHistoryRepository(db)
     password_history_service = UserPasswordHistoryService(user_password_history_repository)

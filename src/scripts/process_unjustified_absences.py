@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Models
 from sqlalchemy import select, and_
-from src.data.db_context.database import SessionLocal
+from src.data.db_context.database import AsyncSessionLocal
 from src.data.models.user_model import UserModel
 from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
@@ -65,81 +65,81 @@ def has_consecutive_unjustified(absences: list, min_count: int = 3) -> bool:
 
 async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserModel, int], None]:
     """Yield users who have X consecutive unjustified absences."""
-    session = SessionLocal()
-    try:
-        cutoff_date = DateTimeHandler.now() - timedelta(days=ABSENCE_DAYS)
-        offset = 0
-        
-        while True:
-            # Get absences by active users, ordered by session date
-            stmt = (
-                select(ClassAttendanceModel)
-                .join(UserModel, ClassAttendanceModel.user_id == UserModel.id)
-                .join(ClassModel, ClassAttendanceModel.class_id == ClassModel.id)
-                .where(
-                    and_(
-                        UserModel.active == True,
-                        ClassAttendanceModel.attended == False,
-                        ClassModel.date < cutoff_date
-                    )
-                )
-                .order_by(ClassAttendanceModel.user_id, ClassModel.date)
-                .offset(offset)
-                .limit(BATCH_SIZE)
-            )
-            result = session.execute(stmt)
-            absences = result.scalars().all()
+    async with AsyncSessionLocal() as session:
+        try:
+            cutoff_date = DateTimeHandler.now() - timedelta(days=ABSENCE_DAYS)
+            offset = 0
             
-            if not absences:
-                break
-            
-            # Group by user
-            user_absences = {}
-            for absence in absences:
-                user_id = absence.user_id
-                if user_id not in user_absences:
-                    user_absences[user_id] = []
-                user_absences[user_id].append(absence)
-            
-            # Check each user for consecutive unjustified absences
-            for user_id, user_absence_list in user_absences.items():
-                # Mark each absence as justified or not
-                for absence in user_absence_list:
-                    stmt = select(StudentAbsenceJustificationModel).where(
-                        StudentAbsenceJustificationModel.class_attendance_id == absence.id
-                    )
-                    just_result = session.execute(stmt)
-                    justification = just_result.scalar_one_or_none()
-                    is_document_valid = False
-                    if justification and justification.document_id:
-                        stmt = select(DocumentModel).where(
-                            and_(
-                                DocumentModel.id == justification.document_id,
-                                DocumentModel.document_type_id == 7 # Absence justification doc type
-                            )
+            while True:
+                # Get absences by active users, ordered by session date
+                stmt = (
+                    select(ClassAttendanceModel)
+                    .join(UserModel, ClassAttendanceModel.user_id == UserModel.id)
+                    .join(ClassModel, ClassAttendanceModel.class_id == ClassModel.id)
+                    .where(
+                        and_(
+                            UserModel.active == True,
+                            ClassAttendanceModel.attended == False,
+                            ClassModel.date < cutoff_date
                         )
-                        document = session.execute(stmt).scalar_one_or_none()
-                        if document:
-                            stmt = select(DocumentValidationModel).where(
+                    )
+                    .order_by(ClassAttendanceModel.user_id, ClassModel.date)
+                    .offset(offset)
+                    .limit(BATCH_SIZE)
+                )
+                result = await session.execute(stmt)
+                absences = result.scalars().all()
+                
+                if not absences:
+                    break
+                
+                # Group by user
+                user_absences = {}
+                for absence in absences:
+                    user_id = absence.user_id
+                    if user_id not in user_absences:
+                        user_absences[user_id] = []
+                    user_absences[user_id].append(absence)
+                
+                # Check each user for consecutive unjustified absences
+                for user_id, user_absence_list in user_absences.items():
+                    # Mark each absence as justified or not
+                    for absence in user_absence_list:
+                        stmt = select(StudentAbsenceJustificationModel).where(
+                            StudentAbsenceJustificationModel.class_attendance_id == absence.id
+                        )
+                        just_result = await session.execute(stmt)
+                        justification = just_result.scalar_one_or_none()
+                        is_document_valid = False
+                        if justification and justification.document_id:
+                            stmt = select(DocumentModel).where(
                                 and_(
-                                    DocumentValidationModel.document_id == document.id,
-                                    DocumentValidationModel.document_validation_status_type_id == 2 # Approved document
+                                    DocumentModel.id == justification.document_id,
+                                    DocumentModel.document_type_id == 7 # Absence justification doc type
                                 )
                             )
-                            doc_validation = session.execute(stmt).scalar_one_or_none()
-                            is_document_valid = doc_validation is not None
-                    absence.justified = bool(justification and is_document_valid)
+                            document = await session.execute(stmt).scalar_one_or_none()
+                            if document:
+                                stmt = select(DocumentValidationModel).where(
+                                    and_(
+                                        DocumentValidationModel.document_id == document.id,
+                                        DocumentValidationModel.document_validation_status_type_id == 2 # Approved document
+                                    )
+                                )
+                                doc_validation = await session.execute(stmt).scalar_one_or_none()
+                                is_document_valid = doc_validation is not None
+                        absence.justified = bool(justification and is_document_valid)
+                    
+                    # Check for consecutive streak
+                    if has_consecutive_unjustified(user_absence_list, MIN_CONSECUTIVE_UNJUSTIFIED):
+                        user = await session.get(UserModel, user_id)
+                        if user:
+                            unjustified_count = sum(1 for a in user_absence_list if not a.justified)
+                            yield user, unjustified_count
                 
-                # Check for consecutive streak
-                if has_consecutive_unjustified(user_absence_list, MIN_CONSECUTIVE_UNJUSTIFIED):
-                    user = session.get(UserModel, user_id)
-                    if user:
-                        unjustified_count = sum(1 for a in user_absence_list if not a.justified)
-                        yield user, unjustified_count
-            
-            offset += BATCH_SIZE
-    finally:
-        session.close()
+                offset += BATCH_SIZE
+        finally:
+            await session.close()
 
 
 async def process_unjustified_absences():
@@ -151,27 +151,27 @@ async def process_unjustified_absences():
     print(f"Absences older than {ABSENCE_DAYS} days\n")
     
     async for user, unjustified_count in stream_users_with_unjustified_absences():
-        session = SessionLocal()
-        try:
-            user_uuid = user.id
-            user_name = user.name
-            
-            # Re-fetch in current session
-            local_user = session.get(UserModel, user.id)
-            if local_user and local_user.active:
-                local_user.active = False
-                session.commit()
-                deactivated += 1
-                print(f"  ✓ Deactivated: {user_name} ({user_uuid}) - {unjustified_count} total unjustified")
-            else:
-                skipped += 1
-                print(f"  - Already inactive: {user_name} ({user_uuid})")
+        async with AsyncSessionLocal() as session:
+            try:
+                user_uuid = user.id
+                user_name = user.name
                 
-        except Exception as e:
-            session.rollback()
-            print(f"  ✗ Error: {e}")
-        finally:
-            session.close()
+                # Re-fetch in current session
+                local_user = await session.get(UserModel, user.id)
+                if local_user and local_user.active:
+                    local_user.active = False
+                    await session.commit()
+                    deactivated += 1
+                    print(f"  ✓ Deactivated: {user_name} ({user_uuid}) - {unjustified_count} total unjustified")
+                else:
+                    skipped += 1
+                    print(f"  - Already inactive: {user_name} ({user_uuid})")
+                    
+            except Exception as e:
+                await session.rollback()
+                print(f"  ✗ Error: {e}")
+            finally:
+                await session.close()
     
     print(f"\nDeactivated: {deactivated} | Skipped: {skipped}")
 

@@ -83,7 +83,7 @@ class DocumentService(BaseService):
                     self._create_student_card(user, dto.base64)
 
             self._create_pending_validation(model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return DocumentMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -132,7 +132,7 @@ class DocumentService(BaseService):
                 user_id=user_id,
                 user_ip_address=user_ip_address
             )
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return DocumentMapper.model_to_schema(document);
         except Exception as e:
@@ -178,7 +178,7 @@ class DocumentService(BaseService):
                         user_ip_address=user_ip_address
                     )
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return [DocumentMapper.model_to_schema(model) for model in models]
         except Exception as e:
@@ -229,7 +229,7 @@ class DocumentService(BaseService):
                 raise ValueError("Nenhum documento encontrado")
             
             deleted: bool = await self.repository.delete(document_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return deleted
         except Exception as e:

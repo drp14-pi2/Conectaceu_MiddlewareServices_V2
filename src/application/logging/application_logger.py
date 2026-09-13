@@ -2,7 +2,7 @@
 import traceback
 
 from src.data.repositories.log_application_error_repository import LogApplicationErrorRepository
-from src.data.db_context.database import SessionLocal
+from src.data.db_context.database import AsyncSessionLocal
 
 
 class ApplicationLogger:
@@ -21,24 +21,20 @@ class ApplicationLogger:
             exception: The exception that occurred
             context: Optional additional context (e.g., "UserService.create_user")
         """
-
-        # Re-throws exception without logging if it is of ValueError type
-        if isinstance(exception, ValueError):
-            raise
         
-        session = SessionLocal()
-        try:
-            repo = LogApplicationErrorRepository(session)
-            stacktrace = traceback.format_exc()
-            error_detail = str(exception)
-            await repo.log(
-                exception=error_detail,
-                stacktrace=stacktrace
-            )
-            await session.commit()
-        except Exception:
-            pass  # Don't let logging failure break the app
-        finally:
-            session.close()
-            if reraise:
-                raise exception
+        async with AsyncSessionLocal() as session:
+            try:
+                repo = LogApplicationErrorRepository(session)
+                stacktrace = traceback.format_exc()
+                error_detail = str(exception)
+                await repo.log(
+                    exception=error_detail,
+                    stacktrace=stacktrace
+                )
+                await session.commit()
+            except Exception:
+                pass  # Don't let logging failure break the app
+            finally:
+                await session.close()
+                if reraise:
+                    raise exception

@@ -2,7 +2,7 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.address_service import AddressService
 from src.data.repositories.address_repository import AddressRepository
@@ -17,7 +17,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_address_service(db: Session = Depends(get_db)) -> AddressService:
+def get_address_service(db: AsyncSession = Depends(get_db)) -> AddressService:
     """Dependency injection for AddressService"""
     repository = AddressRepository(db)
 

@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.user_service import UserService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
@@ -21,7 +21,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_user_service(db: Session = Depends(get_db)) -> UserService:
+def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     """Dependency injection for UserService"""
     user_repo = UserRepository(db)
     password_history_repo = UserPasswordHistoryRepository(db)

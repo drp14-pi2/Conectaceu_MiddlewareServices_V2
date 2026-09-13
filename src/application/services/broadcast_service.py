@@ -140,7 +140,7 @@ class BroadcastService:
                 user_id=sender_user_id,
                 user_ip_address=sender_ip_address
             )
-            self.log_repo.session.commit()
+            await self.log_repo.session.commit()
             
             return results
         except Exception as e:

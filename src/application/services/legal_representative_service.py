@@ -48,7 +48,7 @@ class LegalRepresentativeService(BaseService):
             
             model: LegalRepresentativeModel = LegalRepresentativeMapper.create_to_model(dto)
             saved_model: LegalRepresentativeModel = await self.repository.create(model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return LegalRepresentativeMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -77,7 +77,7 @@ class LegalRepresentativeService(BaseService):
             
             updated_model: LegalRepresentativeModel = LegalRepresentativeMapper.update_model(dto)
             saved_model: LegalRepresentativeModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return LegalRepresentativeMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -108,7 +108,7 @@ class LegalRepresentativeService(BaseService):
                     await self.document_repo.delete(document.id)
 
                 await self.repository.delete(representative_id)
-                self.repository.session.commit()
+                await self.repository.session.commit()
                 deleted = True
             
             return deleted

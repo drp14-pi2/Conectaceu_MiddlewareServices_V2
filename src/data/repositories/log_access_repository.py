@@ -3,14 +3,14 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.log_access_model import LogAccessModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogAccessRepository(BaseRepository):
     '''Repository for user access logs'''
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, LogAccessModel)
 
     async def log(
@@ -56,7 +56,7 @@ class LogAccessRepository(BaseRepository):
             conditions.append(LogAccessModel.origin_ip_address == origin_ip_address)
 
         stmt = select(func.count()).select_from(LogAccessModel).where(and_(*conditions))
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         count = result.scalar() or 0
 
         return count >= max_attempts

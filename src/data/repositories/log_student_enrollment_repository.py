@@ -1,14 +1,14 @@
 """Student enrollment log repository - Insert only"""
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.log_student_enrollment_model import LogStudentEnrollmentModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogStudentEnrollmentRepository(BaseRepository):
     """Repository for Student Enrollment logs - Insert only"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, LogStudentEnrollmentModel)
     
     async def log(

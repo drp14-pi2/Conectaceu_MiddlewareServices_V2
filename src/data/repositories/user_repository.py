@@ -1,7 +1,7 @@
 """User repository"""
 from typing import Optional, List
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from src.data.models.user_model import UserModel
@@ -10,13 +10,13 @@ from src.data.repositories.base.base_repository import BaseRepository
 class UserRepository(BaseRepository[UserModel]):
     """Repository for User entity"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, UserModel)
     
     async def get_by_document(self, document: str) -> Optional[UserModel]:
         """Get user by document"""
         stmt = select(UserModel).where(UserModel.document == document)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_by_email(self, email: str) -> Optional[UserModel]:
@@ -24,7 +24,7 @@ class UserRepository(BaseRepository[UserModel]):
         if not email:
             return None
         stmt = select(UserModel).where(UserModel.email == email)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def get_by_cellphone(self, cellphone: str) -> Optional[UserModel]:
@@ -32,7 +32,7 @@ class UserRepository(BaseRepository[UserModel]):
         if not cellphone:
             return None
         stmt = select(UserModel).where(UserModel.cellphone_number == cellphone)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def find_by_filters(
@@ -73,7 +73,7 @@ class UserRepository(BaseRepository[UserModel]):
             stmt = stmt.where(and_(*conditions))
         stmt = stmt.offset(skip).limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def deactivate(self, user_id: UUID) -> bool:
@@ -81,7 +81,7 @@ class UserRepository(BaseRepository[UserModel]):
         user = await self.get_by_id(user_id)
         if user:
             user.active = False
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -90,7 +90,7 @@ class UserRepository(BaseRepository[UserModel]):
         user = await self.get_by_id(user_id)
         if user:
             user.active = True
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -99,7 +99,7 @@ class UserRepository(BaseRepository[UserModel]):
         user = await self.get_by_id(user_id)
         if user:
             user.password = hashed_password
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -114,7 +114,7 @@ class UserRepository(BaseRepository[UserModel]):
     async def find_by_password_reset_token(self, token: str) -> Optional[UserModel]:
         """Find user by password reset token"""
         stmt = select(UserModel).where(UserModel.password_reset_token == token)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def clear_password_reset_token(self, user_id: UUID) -> bool:
@@ -123,7 +123,7 @@ class UserRepository(BaseRepository[UserModel]):
         if user:
             user.password_reset_token = None
             user.password_reset_expires = None
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -139,6 +139,6 @@ class UserRepository(BaseRepository[UserModel]):
             .order_by(UserModel.student_sequential.desc())
             .limit(1)
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         last = result.scalar_one_or_none()
         return last or 0

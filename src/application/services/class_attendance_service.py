@@ -93,7 +93,7 @@ class ClassAttendanceService(BaseService):
                 await self.repository.create(model)
                 created += 1
         
-        self.repository.session.commit()
+        await self.repository.session.commit()
         summary: dict[str, Any] = await self.repository.get_attendance_summary(class_id)
         
         return {
@@ -224,7 +224,7 @@ class ClassAttendanceService(BaseService):
 
         # Create new justification
         saved_justification: StudentAbsenceJustificationModel = await self._create_justification(attendance_id, document_id)
-        self.repository.session.commit()
+        await self.repository.session.commit()
         
         return {
             "message": "Justificativa carregada com sucesso. Aguarde validação.",

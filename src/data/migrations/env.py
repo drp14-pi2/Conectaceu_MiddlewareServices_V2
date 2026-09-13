@@ -52,8 +52,9 @@ from src.data.models.log_user_activation_model import LogUserActivationModel
 # This is the Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url with our config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Enforce sync URL for Alembic since it does not support async
+sync_url = settings.DATABASE_URL.replace("mysql+aiomysql", "mysql+pymysql")
+config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:

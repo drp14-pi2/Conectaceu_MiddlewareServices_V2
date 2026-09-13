@@ -1,14 +1,14 @@
 """Broadcast message log repository - Insert only"""
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.log_broadcast_message_model import LogBroadcastMessageModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogBroadcastMessageRepository(BaseRepository):
     """Repository for Broadcast Message logs - Insert only"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, LogBroadcastMessageModel)
     
     async def log(

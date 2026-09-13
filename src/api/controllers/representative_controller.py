@@ -2,7 +2,7 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.legal_representative_service import LegalRepresentativeService
 from src.data.repositories.document_repository import DocumentRepository
@@ -20,7 +20,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_representative_service(db: Session = Depends(get_db)) -> LegalRepresentativeService:
+def get_representative_service(db: AsyncSession = Depends(get_db)) -> LegalRepresentativeService:
     """Dependency injection for LegalRepresentativeService"""
     repository = LegalRepresentativeRepository(db)
     document_repo = DocumentRepository(db)

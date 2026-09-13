@@ -1,7 +1,7 @@
 """Course controller"""
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.course_service import CourseService
 from src.data.repositories.course_repository import CourseRepository
@@ -17,7 +17,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_course_service(db: Session = Depends(get_db)) -> CourseService:
+def get_course_service(db: AsyncSession = Depends(get_db)) -> CourseService:
     """Dependency injection for CourseService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)

@@ -121,7 +121,7 @@ class UserService(BaseService):
             )
             # Create Address
             await self._create_address(dto.address, user_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return UserMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -144,7 +144,7 @@ class UserService(BaseService):
             
             updated_model: UserModel = UserMapper.create_to_model(dto)
             saved_model: UserModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return UserMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -179,7 +179,7 @@ class UserService(BaseService):
                     hashed_password=hashed_password
                 )
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return success
         except Exception as e:
@@ -228,7 +228,7 @@ class UserService(BaseService):
                 performed_by_user_ip_address=user_ip_address or "unknown"
             )
 
-        self.repository.session.commit()
+        await self.repository.session.commit()
         
         return success
         
@@ -262,7 +262,7 @@ class UserService(BaseService):
                     performed_by_user_ip_address=user_ip_address or "unknown"
                 )
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return success
         except Exception as e:

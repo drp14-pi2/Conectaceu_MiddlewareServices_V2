@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     # Initialize database connection pool
     try:
         # Test database connection
-        with engine.connect() as conn:
+        async with engine.connect() as conn:
             from sqlalchemy import text
             result = conn.execute(text("SELECT 1"))
             print(f"✅ Database connection successful")

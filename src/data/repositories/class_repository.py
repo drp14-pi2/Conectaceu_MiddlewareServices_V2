@@ -2,7 +2,7 @@
 from datetime import date
 from typing import List, Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from src.data.models.class_model import ClassModel
@@ -11,13 +11,13 @@ from src.data.repositories.base.base_repository import BaseRepository
 class ClassRepository(BaseRepository[ClassModel]):
     """Repository for Class entity"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, ClassModel)
     
     async def get_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all classes for a component"""
         stmt = select(ClassModel).where(ClassModel.course_component_id == component_id)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_component_and_month(self, component_id: UUID, month: int) -> List[ClassModel]:
@@ -30,7 +30,7 @@ class ClassRepository(BaseRepository[ClassModel]):
                 extract('month', ClassModel.date) == month
             )
         ).order_by(ClassModel.date)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_component_id(self, component_id: UUID) -> List[ClassModel]:
@@ -39,7 +39,7 @@ class ClassRepository(BaseRepository[ClassModel]):
             ClassModel.course_component_id == component_id,
             ClassModel.active == True
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def find_by_filters(
@@ -62,7 +62,7 @@ class ClassRepository(BaseRepository[ClassModel]):
             stmt = stmt.where(and_(*conditions))
         stmt = stmt.offset(skip).limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def class_exists(self, component_id: UUID
@@ -72,7 +72,7 @@ class ClassRepository(BaseRepository[ClassModel]):
             ClassModel.course_component_id == component_id
             and ClassModel.active
         )
-        classes = self.session.execute(stmt)
+        classes = await self.session.execute(stmt)
         return classes.scalar_one_or_none() is not None
     
     async def increment_seats(self, class_id: UUID) -> bool:
@@ -80,7 +80,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_:
             class_.seats_in_use += 1
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -89,7 +89,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_ and class_.seats_in_use > 0:
             class_.seats_in_use -= 1
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -98,7 +98,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_:
             class_.active = False
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -107,7 +107,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         class_ = await self.get_by_id(class_id)
         if class_:
             class_.active = True
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -124,5 +124,5 @@ class ClassRepository(BaseRepository[ClassModel]):
                 ClassModel.date <= end
             )
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

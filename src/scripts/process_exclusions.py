@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Models
 from sqlalchemy import and_, select
-from src.data.db_context.database import SessionLocal
+from src.data.db_context.database import AsyncSessionLocal
 from src.data.models.user_model import UserModel
 from src.data.models.address_model import AddressModel
 from src.data.models.course_model import CourseModel
@@ -48,35 +48,35 @@ BATCH_SIZE = settings.BATCH_SIZE
 
 async def _stream_exclusions() -> AsyncGenerator[ProfilesToExcludeModel, None]:
     """Yield exclusion entries one batch at a time."""
-    session = SessionLocal()
-    try:
-        cutoff_date = DateTimeHandler.now() - timedelta(hours=EXCLUSION_HOURS)
-        offset = 0
-        
-        while True:
-            stmt = (
-                select(ProfilesToExcludeModel)
-                .where(
-                    and_(
-                        ProfilesToExcludeModel.created_at < cutoff_date,
-                        ProfilesToExcludeModel.processed == False
+    async with AsyncSessionLocal() as session:
+        try:
+            cutoff_date = DateTimeHandler.now() - timedelta(hours=EXCLUSION_HOURS)
+            offset = 0
+            
+            while True:
+                stmt = (
+                    select(ProfilesToExcludeModel)
+                    .where(
+                        and_(
+                            ProfilesToExcludeModel.created_at < cutoff_date,
+                            ProfilesToExcludeModel.processed == False
+                        )
                     )
+                    .offset(offset)
+                    .limit(BATCH_SIZE)
                 )
-                .offset(offset)
-                .limit(BATCH_SIZE)
-            )
-            result = session.execute(stmt)
-            batch = result.scalars().all()
-            
-            if not batch:
-                break
-            
-            for exclusion in batch:
-                yield exclusion
-            
-            offset += BATCH_SIZE
-    finally:
-        session.close()
+                result = await session.execute(stmt)
+                batch = result.scalars().all()
+                
+                if not batch:
+                    break
+                
+                for exclusion in batch:
+                    yield exclusion
+                
+                offset += BATCH_SIZE
+        finally:
+            await session.close()
 
 def get_anonymized_unique_value(model_id: UUID) -> str:
     return f"ANONYMIZED_{str(model_id).replace('-', '')[:8]}"
@@ -85,116 +85,116 @@ async def process_exclusions():
     processed = 0
     
     async for exclusion in _stream_exclusions():
-        session = SessionLocal()
-        try:
-            user_id = exclusion.user_id
-            user_uuid = user_id
-            
-            print(f"Processing user: {user_uuid}")
-            
-            # Anonymize user
-            user = session.get(UserModel, user_id)
-            if user:
-                user.name = ""
-                user.email = None
-                user.cellphone_number = None
-                user.contact_cellphone_number = None
-                user.school = None
-                user.password = ""
-                user.document = get_anonymized_unique_value(user_id)
-
-            # Unenroll from all active classes
-            from src.data.models.enrollment_model import EnrollmentModel
-
-            stmt = select(EnrollmentModel).where(
-                EnrollmentModel.user_id == user_id,
-                EnrollmentModel.active == True
-            )
-            active_enrollments = session.execute(stmt).scalars().all()
-
-            enrolled_course_ids = []
-            for enrollment in active_enrollments:
-                enrollment.active = False
-                enrolled_course_ids.append(enrollment.course_id)
-            print(f"  - Unenrolled from {len(active_enrollments)} class(es)")
-
-            # Enroll next from waiting list for each freed seat
-            from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
-
-            for course_id in enrolled_course_ids:
-                # Get next in line
-                stmt = (
-                    select(EnrollmentWaitingListModel)
-                    .where(EnrollmentWaitingListModel.course_id == course_id)
-                    .order_by(EnrollmentWaitingListModel.position)
-                    .limit(1)
-                )
-                next_in_line = session.execute(stmt).scalar_one_or_none()
+        async with AsyncSessionLocal() as session:
+            try:
+                user_id = exclusion.user_id
+                user_uuid = user_id
                 
-                if next_in_line:
-                    # Create enrollment for the waiting user
-                    from uuid import uuid4
-                    new_enrollment = EnrollmentModel(
-                        id=uuid4(),
-                        created_at=DateTimeHandler.now(),
-                        updated_at=None,
-                        active=True,
-                        user_id=next_in_line.user_id,
-                        class_id=course_id
+                print(f"Processing user: {user_uuid}")
+                
+                # Anonymize user
+                user = await session.get(UserModel, user_id)
+                if user:
+                    user.name = ""
+                    user.email = None
+                    user.cellphone_number = None
+                    user.contact_cellphone_number = None
+                    user.school = None
+                    user.password = ""
+                    user.document = get_anonymized_unique_value(user_id)
+
+                # Unenroll from all active classes
+                from src.data.models.enrollment_model import EnrollmentModel
+
+                stmt = select(EnrollmentModel).where(
+                    EnrollmentModel.user_id == user_id,
+                    EnrollmentModel.active == True
+                )
+                active_enrollments = await session.execute(stmt).scalars().all()
+
+                enrolled_course_ids = []
+                for enrollment in active_enrollments:
+                    enrollment.active = False
+                    enrolled_course_ids.append(enrollment.course_id)
+                print(f"  - Unenrolled from {len(active_enrollments)} class(es)")
+
+                # Enroll next from waiting list for each freed seat
+                from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
+
+                for course_id in enrolled_course_ids:
+                    # Get next in line
+                    stmt = (
+                        select(EnrollmentWaitingListModel)
+                        .where(EnrollmentWaitingListModel.course_id == course_id)
+                        .order_by(EnrollmentWaitingListModel.position)
+                        .limit(1)
                     )
-                    session.add(new_enrollment)
+                    next_in_line = await session.execute(stmt).scalar_one_or_none()
                     
-                    # Remove from waiting list
-                    session.delete(next_in_line)
-                    
-                    print(f"  - Enrolled waiting user for class")
+                    if next_in_line:
+                        # Create enrollment for the waiting user
+                        from uuid import uuid4
+                        new_enrollment = EnrollmentModel(
+                            id=uuid4(),
+                            created_at=DateTimeHandler.now(),
+                            updated_at=None,
+                            active=True,
+                            user_id=next_in_line.user_id,
+                            class_id=course_id
+                        )
+                        await session.add(new_enrollment)
+                        
+                        # Remove from waiting list
+                        await session.delete(next_in_line)
+                        
+                        print(f"  - Enrolled waiting user for class")
 
-            # Anonymize addresses
-            stmt = select(AddressModel).where(AddressModel.user_id == user_id)
-            addresses = session.execute(stmt).scalars().all()
-            for addr in addresses:
-                addr.zip_code = ""
-                addr.street = ""
-                addr.number = ""
-                addr.complement = None
-                addr.neighborhood = ""
+                # Anonymize addresses
+                stmt = select(AddressModel).where(AddressModel.user_id == user_id)
+                addresses = await session.execute(stmt).scalars().all()
+                for addr in addresses:
+                    addr.zip_code = ""
+                    addr.street = ""
+                    addr.number = ""
+                    addr.complement = None
+                    addr.neighborhood = ""
 
-            # Clear document contents
-            stmt = select(DocumentModel).where(DocumentModel.user_id == user_id)
-            documents = session.execute(stmt).scalars().all()
-            for doc in documents:
-                doc.base64 = ""
-
-            # Anonymize legal representatives and their documents
-            stmt = select(LegalRepresentativeModel).where(
-                LegalRepresentativeModel.user_id == user_id
-            )
-            representatives = session.execute(stmt).scalars().all()
-            for rep in representatives:
-                rep.name = ""
-                rep.document = ""
-                
-                stmt = select(DocumentModel).where(
-                    DocumentModel.legal_representative_id == rep.id
-                )
-                rep_docs = session.execute(stmt).scalars().all()
-                for doc in rep_docs:
+                # Clear document contents
+                stmt = select(DocumentModel).where(DocumentModel.user_id == user_id)
+                documents = await session.execute(stmt).scalars().all()
+                for doc in documents:
                     doc.base64 = ""
 
-            # Re-fetch the exclusion in the current session
-            local_exclusion = session.get(ProfilesToExcludeModel, exclusion.id)
-            if local_exclusion:
-                local_exclusion.processed = True
+                # Anonymize legal representatives and their documents
+                stmt = select(LegalRepresentativeModel).where(
+                    LegalRepresentativeModel.user_id == user_id
+                )
+                representatives = await session.execute(stmt).scalars().all()
+                for rep in representatives:
+                    rep.name = ""
+                    rep.document = ""
+                    
+                    stmt = select(DocumentModel).where(
+                        DocumentModel.legal_representative_id == rep.id
+                    )
+                    rep_docs = await session.execute(stmt).scalars().all()
+                    for doc in rep_docs:
+                        doc.base64 = ""
 
-            session.commit()
-            processed += 1
-            print(f"  ✓ Anonymized")
-            
-        except Exception as e:
-            session.rollback()
-            print(f"  ✗ Error: {e}")
-        finally:
-            session.close()
+                # Re-fetch the exclusion in the current session
+                local_exclusion = await session.get(ProfilesToExcludeModel, exclusion.id)
+                if local_exclusion:
+                    local_exclusion.processed = True
+
+                await session.commit()
+                processed += 1
+                print(f"  ✓ Anonymized")
+                
+            except Exception as e:
+                await session.rollback()
+                print(f"  ✗ Error: {e}")
+            finally:
+                await session.close()
     
     print(f"\nProcessed {processed} exclusion(s) successfully")
 

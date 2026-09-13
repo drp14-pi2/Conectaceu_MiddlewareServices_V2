@@ -2,7 +2,7 @@
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.report_service import ReportService
 from src.data.repositories.class_repository import ClassRepository
@@ -21,7 +21,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_report_service(db: Session = Depends(get_db)) -> ReportService:
+def get_report_service(db: AsyncSession = Depends(get_db)) -> ReportService:
     """Dependency injection for ReportService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)

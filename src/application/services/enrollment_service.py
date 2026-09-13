@@ -69,7 +69,7 @@ class EnrollmentService(BaseService):
                     # Reactivate enrollment
                     existingEnrollment.active = True
                     saved_model = await self.repository.update(existingEnrollment)
-                    self.repository.session.commit()
+                    await self.repository.session.commit()
 
                     return EnrollmentMapper.model_to_schema(saved_model)
             
@@ -96,7 +96,7 @@ class EnrollmentService(BaseService):
                     course_id=course_id
                 )
             
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return EnrollmentMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -122,7 +122,7 @@ class EnrollmentService(BaseService):
                 result: Enrollment = await self.enroll_user(enroll_dto)
                 enrolled.append(result)
             
-            self.repository.session.commit()
+            await self.repository.session.commit()
             enrolled_count: int = len(enrolled)
             
             return {
@@ -170,7 +170,7 @@ class EnrollmentService(BaseService):
                     course_id=course_id
                 )
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return unenrolled
         except Exception as e:
@@ -293,7 +293,7 @@ class EnrollmentService(BaseService):
                 except ValueError:
                     troubledEnrollments.append({'user_id': user_id, 'issue': 'Invalid user ID format'})
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return {
                 'course_id': course_id,

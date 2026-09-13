@@ -45,7 +45,7 @@ class CourseComponentService(BaseService):
                 model.active = True
 
             saved_model = await self.repository.create(model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return CourseComponentMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -69,7 +69,7 @@ class CourseComponentService(BaseService):
             # Update component
             updated_model: CourseComponentModel = CourseComponentMapper.update_model(component, dto)
             saved_model: CourseComponentModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return CourseComponentMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -96,7 +96,7 @@ class CourseComponentService(BaseService):
                 raise ValueError("Componente já desativado")
             
             deactivated: bool = await self.repository.deactivate(component_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return deactivated
         except Exception as e:
@@ -114,7 +114,7 @@ class CourseComponentService(BaseService):
                 raise ValueError("Componente já ativo")
             
             activated: bool = await self.repository.activate(component_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return activated
         except Exception as e:

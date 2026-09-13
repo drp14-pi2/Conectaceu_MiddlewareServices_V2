@@ -68,7 +68,7 @@ class DocumentValidationService(BaseService):
             if performed_by_user_id:
                 await self._log_validation(dto, document_uuid, performed_by_user_id, user_ip_address)
 
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             # If approved, check if user can be activated
             await self._check_user_activation(dto, document_uuid)
@@ -139,4 +139,4 @@ class DocumentValidationService(BaseService):
                 
                 if all_approved:
                     await user_repo.activate(user_uuid)
-                    self.repository.session.commit()
+                    await self.repository.session.commit()

@@ -21,7 +21,7 @@ class AddressService(BaseService):
         try:
             model: AddressModel | None = AddressMapper.create_to_model(dto)
             saved_model: AddressModel = await self.repository.create(model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return AddressMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -37,7 +37,7 @@ class AddressService(BaseService):
             
             updated_model: AddressModel = AddressMapper.update_model(model, dto)
             saved_model: AddressModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return AddressMapper.model_to_schema(saved_model)
         except Exception as e:

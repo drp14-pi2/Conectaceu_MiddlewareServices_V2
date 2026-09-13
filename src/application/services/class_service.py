@@ -47,7 +47,7 @@ class ClassService(BaseService):
             
             model: ClassModel = ClassMapper.create_to_model(dto)
             saved_model: ClassModel = await self.repository.create(model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return ClassMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -92,7 +92,7 @@ class ClassService(BaseService):
             await self.repository.create(class_model)
             created.append(class_date.isoformat())
         
-        self.repository.session.commit()
+        await self.repository.session.commit()
         
         return {
             'component_id': dto.course_component_id,
@@ -113,7 +113,7 @@ class ClassService(BaseService):
             
             updated_model: ClassModel = ClassMapper.update_model(model, dto)
             saved_model: ClassModel = await self.repository.update(updated_model)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return ClassMapper.model_to_schema(saved_model);
         except Exception as e:
@@ -154,7 +154,7 @@ class ClassService(BaseService):
             
             # Deactivate the class
             result = await self.repository.deactivate(course_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             # Return summary
             return {
@@ -182,7 +182,7 @@ class ClassService(BaseService):
                 raise ValueError("Não foi possível desativar a aula porque o component está desativado")
             
             activated = await self.repository.activate(class_id)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return activated
         except Exception as e:

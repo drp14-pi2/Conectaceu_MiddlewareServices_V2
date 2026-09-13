@@ -54,7 +54,7 @@ class PasswordResetService:
             user.password_reset_token = reset_token
             user.password_reset_expires = token_expiry
             await self.user_repo.update(user)
-            self.user_repo.session.commit()
+            await self.user_repo.session.commit()
             # Send email
             await self.email_service.send_password_reset_email(
                 to_email=user.email,
@@ -137,7 +137,7 @@ class PasswordResetService:
             hashed_password: str = PasswordHasher.hash_password(new_password)
             
             success: bool = await self.user_repo.update_password(user_id, hashed_password)
-            self.user_repo.session.commit()
+            await self.user_repo.session.commit()
             
             if success:
                 # Add to password history
@@ -150,7 +150,7 @@ class PasswordResetService:
                 user.password_reset_token = None
                 user.password_reset_expires = None
                 await self.user_repo.update(user)
-                self.user_repo.session.commit()
+                await self.user_repo.session.commit()
                 
                 return {"success": True, "message": "Senha atualizada com sucesso!"}
             

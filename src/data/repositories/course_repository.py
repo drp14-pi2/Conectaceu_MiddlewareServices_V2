@@ -1,7 +1,7 @@
 """Course repository"""
 from typing import Optional, List
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_, select, and_
 
 from src.data.models.course_model import CourseModel
@@ -10,13 +10,13 @@ from src.data.repositories.base.base_repository import BaseRepository
 class CourseRepository(BaseRepository[CourseModel]):
     """Repository for Course entity"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, CourseModel)
     
     async def get_by_name(self, name: str) -> Optional[CourseModel]:
         """Get course by exact name"""
         stmt = select(CourseModel).where(CourseModel.name == name)
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
     async def find_by_filters(
@@ -49,7 +49,7 @@ class CourseRepository(BaseRepository[CourseModel]):
             stmt = stmt.where(and_(*conditions))
         stmt = stmt.offset(skip).limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def deactivate(self, course_id: UUID) -> bool:
@@ -57,7 +57,7 @@ class CourseRepository(BaseRepository[CourseModel]):
         course = await self.get_by_id(course_id)
         if course:
             course.active = False
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -66,6 +66,6 @@ class CourseRepository(BaseRepository[CourseModel]):
         course = await self.get_by_id(course_id)
         if course:
             course.active = True
-            self.session.flush()
+            await self.session.flush()
             return True
         return False

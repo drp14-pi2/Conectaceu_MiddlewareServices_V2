@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.document_service import DocumentService
 from src.application.services.document_validation_service import DocumentValidationService
@@ -23,7 +23,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
+def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentService:
     """Dependency injection for DocumentService"""
     repository = DocumentRepository(db)
     user_repo = UserRepository(db)
@@ -31,7 +31,7 @@ def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
 
     return DocumentService(repository, user_repo, address_repo)
 
-def get_validation_service(db: Session = Depends(get_db)) -> DocumentValidationService:
+def get_validation_service(db: AsyncSession = Depends(get_db)) -> DocumentValidationService:
     """Dependency injection for DocumentValidationService"""
     repository = DocumentValidationRepository(db)
     representative_repo = LegalRepresentativeRepository(db)

@@ -1,7 +1,7 @@
 """Course component repository"""
 from typing import List
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from src.data.models.course_component_model import CourseComponentModel
@@ -10,7 +10,7 @@ from src.data.repositories.base.base_repository import BaseRepository
 class CourseComponentRepository(BaseRepository[CourseComponentModel]):
     """Repository for Course Component entity"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, CourseComponentModel)
     
     async def get_by_course_id(self, course_id: UUID) -> List[CourseComponentModel]:
@@ -18,7 +18,7 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         stmt = select(CourseComponentModel).where(
             CourseComponentModel.course_id == course_id
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_course_id(self, course_id: UUID) -> List[CourseComponentModel]:
@@ -27,7 +27,7 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
             CourseComponentModel.course_id == course_id,
             CourseComponentModel.active == True
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def component_exists(self, name: str, course_id: UUID) -> bool:
@@ -36,7 +36,7 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         conditions = [CourseComponentModel.name == name]
         conditions.append(CourseComponentModel.course_id == course_id)
         stmt = select(CourseComponentModel).where(and_(*conditions))
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
     
     async def deactivate(self, component_id: UUID) -> bool:
@@ -44,7 +44,7 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         component = await self.get_by_id(component_id)
         if component:
             component.active = False
-            self.session.flush()
+            await self.session.flush()
             return True
         return False
     
@@ -53,6 +53,6 @@ class CourseComponentRepository(BaseRepository[CourseComponentModel]):
         component = await self.get_by_id(component_id)
         if component:
             component.active = True
-            self.session.flush()
+            await self.session.flush()
             return True
         return False

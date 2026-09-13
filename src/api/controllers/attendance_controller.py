@@ -3,7 +3,7 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.class_attendance_service import ClassAttendanceService
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
@@ -24,7 +24,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceService:
+def get_attendance_service(db: AsyncSession = Depends(get_db)) -> ClassAttendanceService:
     repository = ClassAttendanceRepository(db)
     enrollment_repo = EnrollmentRepository(db)
     class_repo = ClassRepository(db)

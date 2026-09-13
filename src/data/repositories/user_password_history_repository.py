@@ -1,7 +1,7 @@
 """User password history repository"""
 from typing import List, Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from src.data.models.user_password_history_model import UserPasswordHistoryModel
@@ -10,7 +10,7 @@ from src.data.repositories.base.base_repository import BaseRepository
 class UserPasswordHistoryRepository(BaseRepository):
     """Repository for User Password History entity"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, UserPasswordHistoryModel)
     
     async def get_by_user_id(
@@ -24,7 +24,7 @@ class UserPasswordHistoryRepository(BaseRepository):
             UserPasswordHistoryModel.user_id == user_id
         ).order_by(UserPasswordHistoryModel.created_at.desc()).offset(skip).limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_recent_by_user_id(
@@ -48,7 +48,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         if limit:
             stmt = stmt.limit(limit)
         
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def count_by_user_id(self, user_id: UUID) -> int:
@@ -58,7 +58,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         stmt = select(func.count()).select_from(UserPasswordHistoryModel).where(
             UserPasswordHistoryModel.user_id == user_id
         )
-        result = self.session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.scalar() or 0
     
     async def delete_old_entries(self, user_id: UUID, keep_count: int = 10) -> int:

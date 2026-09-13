@@ -1,14 +1,14 @@
 """User activation log repository - Insert only"""
 from typing import Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.log_user_activation_model import LogUserActivationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogUserActivationRepository(BaseRepository):
     """Repository for User Activation logs - Insert only"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, LogUserActivationModel)
     
     async def log(

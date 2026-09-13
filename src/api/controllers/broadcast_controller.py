@@ -1,6 +1,6 @@
 """Broadcast message controller"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.auth_dependencies import get_current_active_user, require_permission
 from src.application.services.broadcast_service import BroadcastService
@@ -23,7 +23,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
+def get_broadcast_service(db: AsyncSession = Depends(get_db)) -> BroadcastService:
     """Dependency injection for BroadcastService"""
     user_repo = UserRepository(db)
     enrollment_repo = EnrollmentRepository(db)

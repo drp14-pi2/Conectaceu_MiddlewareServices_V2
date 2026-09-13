@@ -1,30 +1,28 @@
 """Database connection and session configuration"""
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import QueuePool
-from typing import Generator
+from typing import AsyncGenerator
 
 from src.infrastructure.configuration.settings import settings
 
 # Create engine with MySQL configuration
-engine = create_engine(
-    settings.DATABASE_URL,
-    poolclass=QueuePool,
+engine = create_async_engine(
+    # Enforce async on URL
+    url=settings.DATABASE_URL.replace("mysql+pymysql", "mysql+aiomysql"),
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
     pool_recycle=settings.DATABASE_POOL_RECYCLE,
-    pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
     echo=settings.DATABASE_ECHO,
     connect_args={
         "connect_timeout": 10,
         "charset": "utf8mb4",
-        "collation": "utf8mb4_0900_as_cs",
         "use_unicode": True,
     }
 )
 
 # MySQL-specific session settings
-@event.listens_for(engine, "connect")
+@event.listens_for(engine.sync_engine, "connect")
 def set_mysql_session_vars(dbapi_connection, connection_record):
     """Set MySQL session variables on connection"""
     cursor = dbapi_connection.cursor()
@@ -37,26 +35,18 @@ def set_mysql_session_vars(dbapi_connection, connection_record):
     cursor.close()
 
 # Session factory
-SessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     bind=engine,
+    class_=AsyncSession,
     autocommit=False,
     autoflush=False,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Dependency for getting database session.
-    Use this for FastAPI dependency injection.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
 
-def get_db_session() -> Session:
-    """
-    Get a database session for non-FastAPI contexts (console apps, scripts).
-    """
-    return SessionLocal()
+def get_db_session() -> AsyncSession:
+    """For non-FastAPI contexts (console scripts). Caller manages lifecycle."""
+    return AsyncSessionLocal()

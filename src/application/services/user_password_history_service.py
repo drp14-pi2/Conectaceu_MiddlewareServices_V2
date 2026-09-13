@@ -79,7 +79,7 @@ class UserPasswordHistoryService(BaseService):
             saved_model: UserPasswordHistoryModel = await self.repository.create(model)
             # Cleanup old passwords (keep only last 10)
             await self._cleanup_old_passwords(user_id, max_history=10)
-            self.repository.session.commit()
+            await self.repository.session.commit()
             
             return UserPasswordHistoryMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -137,7 +137,7 @@ class UserPasswordHistoryService(BaseService):
         """
         try:
             cleaned_count: int = await self.repository.cleanup_old_passwords(user_id, max_history)
-            self.repository.session.commit()
+            await self.repository.session.commit()
 
             return cleaned_count
         except Exception as e:

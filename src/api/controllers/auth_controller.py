@@ -12,7 +12,7 @@ from src.data.repositories.profiles_to_exclude_repository import ProfilesToExclu
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.db_context.database import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.schemas.auth import Login
 from src.domain.schemas.user import User, UserCreate
@@ -20,14 +20,14 @@ from src.domain.schemas.user import User, UserCreate
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
-def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
+def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     user_repo = UserRepository(db)
     log_access_log = LogAccessRepository(db)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
 
     return AuthService(user_repo, log_access_log, profiles_to_exclude_repo)
 
-def get_user_service(db: Session = Depends(get_db)) -> UserService:
+def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     """Dependency injection for UserService"""
     user_repo = UserRepository(db)
     password_history_repo = UserPasswordHistoryRepository(db)

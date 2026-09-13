@@ -1,14 +1,14 @@
 """Document validation log repository - Insert only"""
 from typing import Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.log_document_validation_model import LogDocumentValidationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class LogDocumentValidationRepository(BaseRepository):
     """Repository for Document Validation logs - Insert only"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         super().__init__(session, LogDocumentValidationModel)
     
     async def log(
