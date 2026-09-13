@@ -78,8 +78,8 @@ async def _stream_exclusions() -> AsyncGenerator[ProfilesToExcludeModel, None]:
     finally:
         session.close()
 
-def get_anonymized_unique_value(model_id: bytes) -> str:
-    return f"ANONYMIZED_{model_id.hex()[:8]}"
+def get_anonymized_unique_value(model_id: UUID) -> str:
+    return f"ANONYMIZED_{str(model_id).replace('-', '')[:8]}"
 
 async def process_exclusions():
     processed = 0
@@ -87,13 +87,13 @@ async def process_exclusions():
     async for exclusion in _stream_exclusions():
         session = SessionLocal()
         try:
-            user_id_bytes = exclusion.user_id
-            user_uuid = UUID(bytes=user_id_bytes)
+            user_id = exclusion.user_id
+            user_uuid = user_id
             
             print(f"Processing user: {user_uuid}")
             
             # Anonymize user
-            user = session.get(UserModel, user_id_bytes)
+            user = session.get(UserModel, user_id)
             if user:
                 user.name = ""
                 user.email = None
@@ -101,13 +101,13 @@ async def process_exclusions():
                 user.contact_cellphone_number = None
                 user.school = None
                 user.password = ""
-                user.document = get_anonymized_unique_value(user_id_bytes)
+                user.document = get_anonymized_unique_value(user_id)
 
             # Unenroll from all active classes
             from src.data.models.user_course_model import UserCourseModel
 
             stmt = select(UserCourseModel).where(
-                UserCourseModel.user_id == user_id_bytes,
+                UserCourseModel.user_id == user_id,
                 UserCourseModel.active == True
             )
             active_enrollments = session.execute(stmt).scalars().all()
@@ -121,11 +121,11 @@ async def process_exclusions():
             # Enroll next from waiting list for each freed seat
             from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 
-            for course_id_bytes in enrolled_course_ids:
+            for course_id in enrolled_course_ids:
                 # Get next in line
                 stmt = (
                     select(EnrollmentWaitingListModel)
-                    .where(EnrollmentWaitingListModel.course_id == course_id_bytes)
+                    .where(EnrollmentWaitingListModel.course_id == course_id)
                     .order_by(EnrollmentWaitingListModel.position)
                     .limit(1)
                 )
@@ -135,12 +135,12 @@ async def process_exclusions():
                     # Create enrollment for the waiting user
                     from uuid import uuid4
                     new_enrollment = UserCourseModel(
-                        id=uuid4().bytes,
+                        id=uuid4(),
                         created_at=DateTimeHandler.now(),
                         updated_at=None,
                         active=True,
                         user_id=next_in_line.user_id,
-                        class_id=course_id_bytes
+                        class_id=course_id
                     )
                     session.add(new_enrollment)
                     
@@ -150,7 +150,7 @@ async def process_exclusions():
                     print(f"  - Enrolled waiting user for class")
 
             # Anonymize addresses
-            stmt = select(AddressModel).where(AddressModel.user_id == user_id_bytes)
+            stmt = select(AddressModel).where(AddressModel.user_id == user_id)
             addresses = session.execute(stmt).scalars().all()
             for addr in addresses:
                 addr.zip_code = ""
@@ -160,14 +160,14 @@ async def process_exclusions():
                 addr.neighborhood = ""
 
             # Clear document contents
-            stmt = select(DocumentModel).where(DocumentModel.user_id == user_id_bytes)
+            stmt = select(DocumentModel).where(DocumentModel.user_id == user_id)
             documents = session.execute(stmt).scalars().all()
             for doc in documents:
                 doc.base64 = ""
 
             # Anonymize legal representatives and their documents
             stmt = select(LegalRepresentativeModel).where(
-                LegalRepresentativeModel.user_id == user_id_bytes
+                LegalRepresentativeModel.user_id == user_id
             )
             representatives = session.execute(stmt).scalars().all()
             for rep in representatives:

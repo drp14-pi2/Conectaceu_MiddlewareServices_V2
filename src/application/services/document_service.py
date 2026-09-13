@@ -36,7 +36,7 @@ class DocumentService(BaseService):
     async def upload_document(self, dto: DocumentCreate) -> Document:
         """Upload a new document"""
         try:
-            MAX_SIZE_LIMIT: int = 20_000_000
+            MAX_SIZE_LIMIT: int = 16_000_000
             fileLength: int = len(dto.base64)
             if fileLength > MAX_SIZE_LIMIT:
                 raise ValueError(f'Conteúdo do documento não pode ser maior que {MAX_SIZE_LIMIT / 1_000_000} MB')
@@ -67,7 +67,7 @@ class DocumentService(BaseService):
 
                 if is_user_photo:
                     existing_student_card: DocumentModel = (await self.repository.get_by_type(
-                        UUID(bytes=user.id),
+                        user.id,
                         STUDENT_PHOTO_DOC_TYPE_ID
                     ))[0]
                     existing_student_card.base64 = await self._get_student_card_base64(user, dto.base64)
@@ -111,7 +111,7 @@ class DocumentService(BaseService):
             log_repo = LogDocumentRequestRepository(self.repository.session)
             await log_repo.log(
                 document_id=document.id,
-                user_id=user_id.bytes,
+                user_id=user_id,
                 user_ip_address=user_ip_address
             )
             self.repository.session.commit()
@@ -141,7 +141,7 @@ class DocumentService(BaseService):
                     log_repo = LogDocumentRequestRepository(self.repository.session)
                     await log_repo.log(
                         document_id=model.id,
-                        user_id=logged_user_id.bytes,
+                        user_id=logged_user_id,
                         user_ip_address=user_ip_address
                     )
 
@@ -206,7 +206,7 @@ class DocumentService(BaseService):
     async def _create_pending_validation(self, document: DocumentModel) -> None:
         """Create pending validation for secretary review"""
         from uuid import uuid4
-        from src.domain.schemas.document_validation import DocumentValidation, DocumentValidationInput
+        from src.domain.schemas.document_validation import DocumentValidationInput
         from src.application.mappers.document_validation_mapper import DocumentValidationMapper
         from src.data.repositories.document_validation_repository import DocumentValidationRepository
         doc_validation_repo = DocumentValidationRepository(self.repository.session)
@@ -217,7 +217,7 @@ class DocumentService(BaseService):
             updated_at=None,
             rejection_reason=None,
             document_validation_status_type_id=1,  # Pending
-            document_id=UUID(bytes=document.id)
+            document_id=document.id
         )
         model: DocumentValidationModel = DocumentValidationMapper.create_to_model(dto)
         await doc_validation_repo.create(model)
@@ -242,7 +242,7 @@ class DocumentService(BaseService):
             card_html = card_html.replace('${document}', user.document)
             card_html = card_html.replace('${birthdate}', user.birthdate.strftime("%d/%m/%Y"))
             card_html = card_html.replace('${studentPhotoBase64}', photo_base_64.base64)
-            user_address = (await self.address_repo.get_by_user_id(UUID(bytes=user.id)))[0]
+            user_address = (await self.address_repo.get_by_user_id(user.id))[0]
             card_html = card_html.replace(
                 '${userFullAddress}',
                 f'{user_address.street}, {user_address.number} - {user_address.neighborhood}, {FormatHandler.format_zip_code(user_address.zip_code)}' if user_address else ''
@@ -253,7 +253,7 @@ class DocumentService(BaseService):
         return self._render_to_base64(card_html)
     
     async def _create_student_card(self, user: UserModel, photo_base_64: str) -> DocumentCreate:
-        user_id: UUID = UUID(bytes=user.id)
+        user_id: UUID = user.id
         dto: DocumentCreate = DocumentCreate(
             base64=self._get_student_card_base64(user, photo_base_64),
             user_id=str(user_id),
@@ -319,7 +319,7 @@ class DocumentService(BaseService):
         
         count: int = 1
         for enrollment in enrollments:
-            user: UserModel | None = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
+            user: UserModel | None = await self.user_repo.get_by_id(enrollment.user_id)
 
             if not user:
                 continue
@@ -375,17 +375,17 @@ class DocumentService(BaseService):
         if class_count == 0:
             raise ValueError('Nenhuma aula encontrada para o mês')
         
-        course: CourseModel = await course_repo.get_by_id(UUID(bytes=component.course_id))
+        course: CourseModel = await course_repo.get_by_id(component.course_id)
 
         if not course:
             raise ValueError('Curso não encontrado')
         
-        enrollments: List[UserCourseModel] = await user_course_repo.get_active_by_course_id(UUID(bytes=course.id))
+        enrollments: List[UserCourseModel] = await user_course_repo.get_active_by_course_id(course.id)
 
         if len(enrollments) == 0:
             raise ValueError('Nenhuma matricula encontrada para o curso')
         
-        educator: UserModel = await self.user_repo.get_by_id(UUID(bytes=course.responsible_educator_1))
+        educator: UserModel = await self.user_repo.get_by_id(course.responsible_educator_1)
 
         if not educator:
             raise ValueError('Educador responsável não encontrado')

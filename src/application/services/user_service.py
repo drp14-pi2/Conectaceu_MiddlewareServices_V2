@@ -112,7 +112,7 @@ class UserService(BaseService):
             
             # Save user
             saved_model: UserModel = await self.repository.create(model)
-            user_id = UUID(bytes=saved_model.id)
+            user_id: UUID = saved_model.id
             
             # Save password history
             await self.password_history_service.add_password_hash_to_history(
@@ -120,7 +120,7 @@ class UserService(BaseService):
                 hashed_password=model.password
             )
             # Create Address
-            await self._create_address(dto.address)
+            await self._create_address(dto.address, user_id)
             self.repository.session.commit()
 
             return UserMapper.model_to_schema(saved_model)
@@ -209,7 +209,7 @@ class UserService(BaseService):
             from uuid import uuid4
             
             exclusion_model = ProfilesToExcludeModel(
-                id=uuid4().bytes,
+                id=uuid4(),
                 created_at=DateTimeHandler.now(),
                 user_id=user_id,
                 processed=False
@@ -223,8 +223,8 @@ class UserService(BaseService):
             await log_repo.log(
                 deactivation_reason=dto.reason,
                 activated=False,
-                user_id=user_id.bytes,
-                performed_by_user_id=performed_by_user_id.bytes,
+                user_id=user_id,
+                performed_by_user_id=performed_by_user_id,
                 performed_by_user_ip_address=user_ip_address or "unknown"
             )
 
@@ -257,8 +257,8 @@ class UserService(BaseService):
                 await log_repo.log(
                     deactivation_reason=None,
                     activated=True,
-                    user_id=user_id.bytes,
-                    performed_by_user_id=performed_by_user_id.bytes,
+                    user_id=user_id,
+                    performed_by_user_id=performed_by_user_id,
                     performed_by_user_ip_address=user_ip_address or "unknown"
                 )
 
@@ -333,13 +333,14 @@ class UserService(BaseService):
         if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/\'`~]', password):
             raise ValueError("A senha deve conter pelo menos um caractere especial")
 
-    async def _create_address(self, dto: AddressCreate):
+    async def _create_address(self, dto: AddressCreate, user_id: UUID):
         from src.data.models.address_model import AddressModel
         from src.application.mappers.address_mapper import AddressMapper
         from src.data.repositories.address_repository import AddressRepository
 
         address_repo = AddressRepository(self.repository.session)
         model: AddressModel = AddressMapper.create_to_model(dto)
+        model.user_id = user_id
         saved_model: AddressModel = await address_repo.create(model)
 
         return AddressMapper.model_to_schema(saved_model)

@@ -16,7 +16,7 @@ class DocumentValidationRepository(BaseRepository):
     async def get_by_document_id(self, document_id: UUID) -> Optional[DocumentValidationModel]:
         """Get validation by document ID"""
         stmt = select(DocumentValidationModel).where(
-            DocumentValidationModel.document_id == document_id.bytes
+            DocumentValidationModel.document_id == document_id
         )
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()

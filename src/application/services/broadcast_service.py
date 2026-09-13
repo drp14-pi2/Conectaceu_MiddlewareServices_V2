@@ -137,7 +137,7 @@ class BroadcastService:
                 sent_whatsapp=dto.send_whatsapp and results['whatsapp_sent'] > 0,
                 sent_email=dto.send_email and results['email_sent'] > 0,
                 sent_sms=dto.send_sms and results['sms_sent'] > 0,
-                user_id=sender_user_id.bytes,
+                user_id=sender_user_id,
                 user_ip_address=sender_ip_address
             )
             self.log_repo.session.commit()
@@ -214,17 +214,17 @@ class BroadcastService:
         components: List[CourseComponentModel] = await self.component_repo.get_by_course_id(course_uuid)
             
         for component in components:
-            component_uuid: UUID = UUID(bytes=component.id)
+            component_uuid: UUID = component.id
             
             # Get classes for this component
             classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_uuid)
             
             for class_ in classes:
-                class_uuid: UUID = UUID(bytes=class_.id)
+                class_uuid: UUID = class_.id
                 
                 # Stream active enrollments one at a time
                 async for enrollment in self._stream_enrollments(class_uuid):
-                    user: UserModel = await self.user_repo.get_by_id(UUID(bytes=enrollment.user_id))
+                    user: UserModel = await self.user_repo.get_by_id(enrollment.user_id)
                     if user and user.active and user.id not in seen_ids:
                         seen_ids.add(user.id)
                         yield user

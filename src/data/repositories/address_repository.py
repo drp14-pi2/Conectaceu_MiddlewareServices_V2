@@ -15,7 +15,7 @@ class AddressRepository(BaseRepository[AddressModel]):
     
     async def get_by_user_id(self, user_id: UUID) -> List[AddressModel]:
         """Get all addresses for a user"""
-        stmt = select(AddressModel).where(AddressModel.user_id == user_id.bytes)
+        stmt = select(AddressModel).where(AddressModel.user_id == user_id)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     

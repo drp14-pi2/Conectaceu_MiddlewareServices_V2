@@ -1,14 +1,14 @@
 """Enrollment waiting list model"""
 from sqlalchemy import Column, ForeignKey, DateTime, Integer, func
-from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import Base
 import uuid
+from src.data.db_context.types import UUIDBinary
 
 class EnrollmentWaitingListModel(Base):
     __tablename__ = "enrollment_waiting_list"
     
-    id = Column(BINARY(16), primary_key=True, default=lambda: uuid.uuid4().bytes)
+    id = Column(UUIDBinary, primary_key=True, default=lambda: uuid.uuid4())
     created_at = Column(DateTime, default=func.now(), nullable=False)
-    user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    course_id = Column(BINARY(16), ForeignKey('course.id'), nullable=False)
-    position = Column(Integer, nullable=False)  # Queue position
+    user_id = Column(UUIDBinary, ForeignKey('user.id'), nullable=False)
+    course_id = Column(UUIDBinary, ForeignKey('course.id'), nullable=False)
+    position = Column(Integer, nullable=False) # Queue position

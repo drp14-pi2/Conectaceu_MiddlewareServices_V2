@@ -14,7 +14,7 @@ class ProfilesToExcludeRepository(BaseRepository):
     async def get_by_user_id(self, user_id: UUID) -> Optional[ProfilesToExcludeModel]:
         """Check if a user's profile is on the exclusion list."""
         stmt = select(ProfilesToExcludeModel).where(
-            ProfilesToExcludeModel.user_id == user_id.bytes
+            ProfilesToExcludeModel.user_id == user_id
         )
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()

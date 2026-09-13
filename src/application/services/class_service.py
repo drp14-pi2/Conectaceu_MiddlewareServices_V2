@@ -176,7 +176,7 @@ class ClassService(BaseService):
                 raise ValueError("Aula inativa")
             
             # Check if component is active
-            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(class_.course_component_id)
 
             if not component or not component.active:
                 raise ValueError("Não foi possível desativar a aula porque o component está desativado")
@@ -196,12 +196,12 @@ class ClassService(BaseService):
             if not class_:
                 raise ValueError("Aula não encontrada")
             
-            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(class_.course_component_id)
 
             if not component:
                 raise ValueError("Componente não encontrado")
 
-            course: CourseModel | None = await self.course_repo.get_by_id(UUID(bytes=component.course_id))
+            course: CourseModel | None = await self.course_repo.get_by_id(component.course_id)
 
             if not course:
                 raise ValueError("Curso não encontrado")

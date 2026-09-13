@@ -1,7 +1,7 @@
 """User address model"""
 from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class AddressModel(UuidPkUpdatableBaseModel):
     __tablename__ = "address"
@@ -13,4 +13,4 @@ class AddressModel(UuidPkUpdatableBaseModel):
     neighborhood = Column(String(100), nullable=False)
     
     # Foreign keys
-    user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
+    user_id = Column(UUIDBinary, ForeignKey('user.id'), nullable=False)

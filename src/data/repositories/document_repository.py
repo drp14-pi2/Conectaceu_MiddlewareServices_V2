@@ -15,13 +15,13 @@ class DocumentRepository(BaseRepository):
     
     async def get_by_user_id(self, user_id: UUID) -> List[DocumentModel]:
         """Get all documents for a user"""
-        stmt = select(DocumentModel).where(DocumentModel.user_id == user_id.bytes and DocumentModel.legal_representative_id is None)
+        stmt = select(DocumentModel).where(DocumentModel.user_id == user_id and DocumentModel.legal_representative_id is None)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_by_legal_representative_id(self, legal_representative_id: UUID) -> List[DocumentModel]:
         """Get all documents for a legal representative"""
-        stmt = select(DocumentModel).where(DocumentModel.legal_representative_id == legal_representative_id.bytes)
+        stmt = select(DocumentModel).where(DocumentModel.legal_representative_id == legal_representative_id)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
@@ -51,7 +51,7 @@ class DocumentRepository(BaseRepository):
     ) -> List[DocumentModel]:
         """Get documents of specific type for a user"""
         stmt = select(DocumentModel).where(
-            DocumentModel.user_id == user_id.bytes,
+            DocumentModel.user_id == user_id,
             DocumentModel.document_type_id == document_type_id
         )
         result = self.session.execute(stmt)
@@ -64,7 +64,7 @@ class DocumentRepository(BaseRepository):
     ) -> Optional[DocumentModel]:
         """Get front side of a document type"""
         stmt = select(DocumentModel).where(
-            DocumentModel.user_id == user_id.bytes,
+            DocumentModel.user_id == user_id,
             DocumentModel.document_type_id == document_type_id,
             DocumentModel.is_front == True
         )
@@ -78,7 +78,7 @@ class DocumentRepository(BaseRepository):
     ) -> Optional[DocumentModel]:
         """Get back side of a document type"""
         stmt = select(DocumentModel).where(
-            DocumentModel.user_id == user_id.bytes,
+            DocumentModel.user_id == user_id,
             DocumentModel.document_type_id == document_type_id,
             DocumentModel.is_front == False
         )

@@ -1,7 +1,7 @@
 """Student enrollment logging model"""
 from sqlalchemy import Column, String, Boolean, ForeignKey
-from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import LogBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class LogStudentEnrollmentModel(LogBaseModel):
     __tablename__ = "log_student_enrollment"
@@ -10,5 +10,5 @@ class LogStudentEnrollmentModel(LogBaseModel):
     user_ip_address = Column(String(39), nullable=False)
     
     # Foreign keys
-    user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    course_id = Column(BINARY(16), ForeignKey('course.id'), nullable=False)
+    user_id = Column(UUIDBinary, ForeignKey('user.id'), nullable=False)
+    course_id = Column(UUIDBinary, ForeignKey('course.id'), nullable=False)

@@ -16,7 +16,7 @@ class ClassRepository(BaseRepository[ClassModel]):
     
     async def get_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all classes for a component"""
-        stmt = select(ClassModel).where(ClassModel.course_component_id == component_id.bytes)
+        stmt = select(ClassModel).where(ClassModel.course_component_id == component_id)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
@@ -26,7 +26,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         
         stmt = select(ClassModel).where(
             and_(
-                ClassModel.course_component_id == component_id.bytes,
+                ClassModel.course_component_id == component_id,
                 extract('month', ClassModel.date) == month
             )
         ).order_by(ClassModel.date)
@@ -36,7 +36,7 @@ class ClassRepository(BaseRepository[ClassModel]):
     async def get_active_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all active classes for a component"""
         stmt = select(ClassModel).where(
-            ClassModel.course_component_id == component_id.bytes,
+            ClassModel.course_component_id == component_id,
             ClassModel.active == True
         )
         result = self.session.execute(stmt)
@@ -53,7 +53,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         conditions = []
         
         if component_id:
-            conditions.append(ClassModel.course_component_id == component_id.bytes)
+            conditions.append(ClassModel.course_component_id == component_id)
         if active is not None:
             conditions.append(ClassModel.active == active)
         
@@ -69,7 +69,7 @@ class ClassRepository(BaseRepository[ClassModel]):
     ) -> bool:
         """Validates if classes exist for the given component and shift"""
         stmt = select(ClassModel).where(
-            ClassModel.course_component_id == component_id.bytes
+            ClassModel.course_component_id == component_id
             and ClassModel.active
         )
         classes = self.session.execute(stmt)
@@ -119,7 +119,7 @@ class ClassRepository(BaseRepository[ClassModel]):
         
         stmt = select(ClassModel).where(
             and_(
-                ClassModel.course_component_id == component_id.bytes,
+                ClassModel.course_component_id == component_id,
                 ClassModel.date >= start,
                 ClassModel.date <= end
             )

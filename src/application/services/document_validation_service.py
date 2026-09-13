@@ -103,8 +103,8 @@ class DocumentValidationService(BaseService):
         await log_repo.log(
             rejection_reason=dto.rejection_reason,
             activated=(dto.document_validation_status_type_id == 2), # Approved
-            user_id=document.user_id if document else document_uuid.bytes,
-            performed_by_user_id=performed_by_user_id.bytes,
+            user_id=document.user_id if document else document_uuid,
+            performed_by_user_id=performed_by_user_id,
             performed_user_ip_address=user_ip_address or "unknown"
         )
 
@@ -116,13 +116,13 @@ class DocumentValidationService(BaseService):
             document: DocumentModel | None = await self.doc_repo.get_by_id(document_uuid)
 
             if document:
-                user_uuid: UUID = UUID(bytes=document.user_id)
+                user_uuid: UUID = document.user_id
                 documents: List[DocumentModel] = await self.doc_repo.get_by_user_id(user_uuid)
                 # Check if all documents have been approved
                 all_approved: bool = True
 
                 for doc in documents:
-                    doc_uuid: UUID = UUID(bytes=doc.id)
+                    doc_uuid: UUID = doc.id
                     doc_validation: DocumentValidationModel | None = await self.repository.get_by_document_id(doc_uuid)
 
                     if not doc_validation or doc_validation.document_validation_status_type_id != 2:

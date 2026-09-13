@@ -1,5 +1,6 @@
 """Document validation log repository - Insert only"""
 from typing import Optional
+from uuid import UUID
 from sqlalchemy.orm import Session
 from src.data.models.log_document_validation_model import LogDocumentValidationModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -14,8 +15,8 @@ class LogDocumentValidationRepository(BaseRepository):
         self,
         rejection_reason: Optional[str],
         activated: bool,
-        user_id: bytes,
-        performed_by_user_id: bytes,
+        user_id: UUID,
+        performed_by_user_id: UUID,
         performed_user_ip_address: str
     ) -> LogDocumentValidationModel:
         """Log a document validation"""

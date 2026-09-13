@@ -1,4 +1,6 @@
 """Course creation log repository - Insert only"""
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from src.data.models.log_course_creation_model import LogCourseCreationModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -16,7 +18,7 @@ class LogCourseCreationRepository(BaseRepository):
         workload: int,
         active: bool,
         user_ip_address: str,
-        user_id: bytes
+        user_id: UUID
     ) -> LogCourseCreationModel:
         """Log a course creation"""
         log = LogCourseCreationModel(

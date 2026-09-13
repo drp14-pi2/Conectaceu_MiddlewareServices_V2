@@ -21,7 +21,7 @@ class UserPasswordHistoryRepository(BaseRepository):
     ) -> List[UserPasswordHistoryModel]:
         """Get password history for a user, ordered by most recent first"""
         stmt = select(UserPasswordHistoryModel).where(
-            UserPasswordHistoryModel.user_id == user_id.bytes
+            UserPasswordHistoryModel.user_id == user_id
         ).order_by(UserPasswordHistoryModel.created_at.desc()).offset(skip).limit(limit)
         
         result = self.session.execute(stmt)
@@ -42,7 +42,7 @@ class UserPasswordHistoryRepository(BaseRepository):
     ) -> List[UserPasswordHistoryModel]:
         """Get oldest password history entries for a user (for cleanup)"""
         stmt = select(UserPasswordHistoryModel).where(
-            UserPasswordHistoryModel.user_id == user_id.bytes
+            UserPasswordHistoryModel.user_id == user_id
         ).order_by(UserPasswordHistoryModel.created_at.asc())
         
         if limit:
@@ -56,7 +56,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         from sqlalchemy import func
         
         stmt = select(func.count()).select_from(UserPasswordHistoryModel).where(
-            UserPasswordHistoryModel.user_id == user_id.bytes
+            UserPasswordHistoryModel.user_id == user_id
         )
         result = self.session.execute(stmt)
         return result.scalar() or 0
@@ -74,7 +74,7 @@ class UserPasswordHistoryRepository(BaseRepository):
         deleted_count = 0
         
         for entry in entries_to_delete:
-            await self.delete(UUID(bytes=entry.id))
+            await self.delete(entry.id)
             deleted_count += 1
         
         return deleted_count

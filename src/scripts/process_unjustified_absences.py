@@ -102,7 +102,7 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
                 user_absences[user_id].append(absence)
             
             # Check each user for consecutive unjustified absences
-            for user_id_bytes, user_absence_list in user_absences.items():
+            for user_id, user_absence_list in user_absences.items():
                 # Mark each absence as justified or not
                 for absence in user_absence_list:
                     stmt = select(StudentAbsenceJustificationModel).where(
@@ -132,7 +132,7 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
                 
                 # Check for consecutive streak
                 if has_consecutive_unjustified(user_absence_list, MIN_CONSECUTIVE_UNJUSTIFIED):
-                    user = session.get(UserModel, user_id_bytes)
+                    user = session.get(UserModel, user_id)
                     if user:
                         unjustified_count = sum(1 for a in user_absence_list if not a.justified)
                         yield user, unjustified_count
@@ -153,7 +153,7 @@ async def process_unjustified_absences():
     async for user, unjustified_count in stream_users_with_unjustified_absences():
         session = SessionLocal()
         try:
-            user_uuid = UUID(bytes=user.id)
+            user_uuid = user.id
             user_name = user.name
             
             # Re-fetch in current session

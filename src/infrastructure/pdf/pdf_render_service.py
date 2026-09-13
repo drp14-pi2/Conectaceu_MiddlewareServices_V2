@@ -19,10 +19,12 @@ class PdfRenderService:
             PDF as bytes
         """
         doc = HTML(string=html_content, base_url=base_url)
+
         return doc.write_pdf()
 
     @staticmethod
     def render_to_base64(html_content: str, base_url: Optional[str] = None) -> str:
         """Convert HTML string to base64-encoded PDF string."""
         pdf_bytes = PdfRenderService.render_to_bytes(html_content, base_url)
+
         return base64.b64encode(pdf_bytes).decode('utf-8')

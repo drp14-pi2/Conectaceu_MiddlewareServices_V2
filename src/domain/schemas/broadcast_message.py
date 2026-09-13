@@ -24,4 +24,4 @@ class BroadcastMessageCreate(BaseModel):
 
 class BroadcastDocument(BaseModel):
     fileNameWithExtension: str = Field(min_length=5, max_length=144)
-    fileBase64: str = Field(min_length=100, max_length=20_000_000)
+    fileBase64: str = Field(min_length=100, max_length=16_000_000)

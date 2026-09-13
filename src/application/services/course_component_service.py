@@ -33,7 +33,7 @@ class CourseComponentService(BaseService):
                 raise ValueError("Curso não encontrado")
 
             # Validate if component already exists
-            component_exists = await self.repository.component_exists(dto.name, UUID(bytes=course.id))
+            component_exists = await self.repository.component_exists(dto.name, course.id)
 
             if component_exists:
                 raise ValueError("Componente já existe para este curso")
@@ -61,7 +61,7 @@ class CourseComponentService(BaseService):
                 raise ValueError("Componente não encontrado")
 
             if dto.name:
-                component_exists: bool = await self.repository.component_exists(dto.name, UUID(bytes=component.course_id))
+                component_exists: bool = await self.repository.component_exists(dto.name, component.course_id)
 
                 if component_exists:
                     raise ValueError("Componente já existe com esse nome")

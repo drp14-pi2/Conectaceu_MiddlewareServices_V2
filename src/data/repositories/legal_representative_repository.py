@@ -16,7 +16,7 @@ class LegalRepresentativeRepository(BaseRepository):
     async def get_by_user_id(self, user_id: UUID) -> List[LegalRepresentativeModel]:
         """Get all legal representatives for a user (minor)"""
         stmt = select(LegalRepresentativeModel).where(
-            LegalRepresentativeModel.user_id == user_id.bytes
+            LegalRepresentativeModel.user_id == user_id
         )
         result = self.session.execute(stmt)
         return list(result.scalars().all())
@@ -41,7 +41,7 @@ class LegalRepresentativeRepository(BaseRepository):
         )
         
         if exclude_id:
-            stmt = stmt.where(LegalRepresentativeModel.id != exclude_id.bytes)
+            stmt = stmt.where(LegalRepresentativeModel.id != exclude_id)
         
         result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
@@ -50,7 +50,7 @@ class LegalRepresentativeRepository(BaseRepository):
         """Check if document already exists"""
         stmt = select(LegalRepresentativeModel).where(
             LegalRepresentativeModel.document == document
-            and LegalRepresentativeModel.id != user_id.bytes
+            and LegalRepresentativeModel.id != user_id
         )
         result = self.session.execute(stmt)
         return result.scalar_one_or_none() is not None

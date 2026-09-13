@@ -80,9 +80,9 @@ class UserCourseService(BaseService):
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
                 await log_repo.log(
                     enrolled=True,
-                    user_id=enrolled_by_user_id.bytes,
+                    user_id=enrolled_by_user_id,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=course_id.bytes
+                    course_id=course_id
                 )
             
             self.repository.session.commit()
@@ -137,7 +137,7 @@ class UserCourseService(BaseService):
             if not enrollment:
                 raise ValueError("Enrollment not found")
             
-            course_id: UUID = UUID(bytes=enrollment.course_id)
+            course_id: UUID = enrollment.course_id
             
             if not enrollment.active:
                 raise ValueError("Enrollment already inactive")
@@ -154,9 +154,9 @@ class UserCourseService(BaseService):
                 log_repo = LogStudentEnrollmentRepository(self.repository.session)
                 await log_repo.log(
                     enrolled=False,
-                    user_id=unenrolled_by_user_id.bytes,
+                    user_id=unenrolled_by_user_id,
                     user_ip_address=user_ip_address or "unknown",
-                    course_id=course_id.bytes
+                    course_id=course_id
                 )
 
             self.repository.session.commit()
@@ -181,12 +181,12 @@ class UserCourseService(BaseService):
             active_enrollments: List[UserCourseModel] = await self.repository.get_active_by_user_id(user_id)
 
             for enrollment in active_enrollments:
-                course: CourseModel | None = await self.course_repo.get_by_id(UUID(bytes=enrollment.course_id))
+                course: CourseModel | None = await self.course_repo.get_by_id(enrollment.course_id)
 
                 if course:
                     enrollments_with_details.append({
-                        'enrollment_id': UUID(bytes=enrollment.id),
-                        'course_id': UUID(bytes=course.id),
+                        'enrollment_id': enrollment.id,
+                        'course_id': course.id,
                         'shift_type_id': course.shift_type_id,
                         'enrolled_at': enrollment.created_at
                     })
@@ -332,7 +332,7 @@ class UserCourseService(BaseService):
         from uuid import uuid4
         
         model = EnrollmentWaitingListModel(
-            id=uuid4().bytes,
+            id=uuid4(),
             created_at=DateTimeHandler.now(),
             user_id=user_id,
             course_id=course_id,
@@ -343,7 +343,7 @@ class UserCourseService(BaseService):
         return {
             "message": "Limite de matrículas já atingido. Você está na lista de espera.",
             "position": last_position + 1,
-            "waiting_list_id": UUID(bytes=saved_model.id)
+            "waiting_list_id": saved_model.id
         }
     
     async def _enroll_next_from_waiting_list(self, course_id: UUID) -> None:
@@ -351,7 +351,7 @@ class UserCourseService(BaseService):
         next_in_line: EnrollmentWaitingListModel | None = await self.waiting_list_repo.get_next_in_line(course_id)
         
         if next_in_line:
-            user_id: UUID = UUID(bytes=next_in_line.user_id)
+            user_id: UUID = next_in_line.user_id
             
             # Remove from waiting list
             await self.waiting_list_repo.remove_user(user_id, course_id)

@@ -117,7 +117,7 @@ class AuthService:
                 return None
             
             # Generate tokens
-            user_uuid: UUID = UUID(bytes=user.id)
+            user_uuid: UUID = user.id
             has_pending_deactivation: bool = await self.profiles_to_exclude_repo.is_within_cancellation_window(user_uuid)
 
             # Validates if a user has an active deactivation process

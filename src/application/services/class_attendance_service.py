@@ -56,12 +56,12 @@ class ClassAttendanceService(BaseService):
             raise ValueError("Não é possível registrar chamada antes da data")
         
         # Get the course for this class
-        component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(bytes=class_.course_component_id))
+        component: CourseComponentModel | None = await self.component_repo.get_by_id(class_.course_component_id)
 
         if not component:
             raise ValueError("Componente não encontrado")
         
-        course_id: UUID = UUID(bytes=component.course_id)
+        course_id: UUID = component.course_id
         created: int = 0
         updated: int = 0
         
@@ -152,15 +152,15 @@ class ClassAttendanceService(BaseService):
             all_classes: List[dict[str, Any]] = []
             
             for enrollment in enrollments:
-                course_id: UUID = UUID(bytes=enrollment.course_id)
+                course_id: UUID = enrollment.course_id
                 components: List[CourseComponentModel] = await self.component_repo.get_by_course_id(course_id)
 
                 for component in components:
-                    component_id: UUID = UUID(bytes=component.id)
+                    component_id: UUID = component.id
                     classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_id)
 
                     for class_ in classes:
-                        class_id: UUID = UUID(bytes=class_.id)
+                        class_id: UUID = class_.id
                         
                         if date and class_.date.date() != date:
                             continue
@@ -182,7 +182,7 @@ class ClassAttendanceService(BaseService):
                             'attended': attendance_status,
                             'is_past': is_past,
                             'is_future': not is_past,
-                            'attendance_id': UUID(bytes=attendance.id) if attendance else None
+                            'attendance_id': attendance.id if attendance else None
                         })
             
             all_classes.sort(key=lambda c: c['date'], reverse=True)
@@ -205,7 +205,7 @@ class ClassAttendanceService(BaseService):
         if not attendance:
             raise ValueError("Chamada não encontrada")
         
-        if UUID(bytes=attendance.user_id) != user_id:
+        if attendance.user_id != user_id:
             raise ValueError("Esta chamada não pertence a você")
         
         # Verify if the student was present
@@ -220,7 +220,7 @@ class ClassAttendanceService(BaseService):
         
         # Create the document
         saved_document: DocumentModel = await self._create_document(document);
-        document_id: UUID = UUID(bytes=saved_document.id)
+        document_id: UUID = saved_document.id
 
         # Create new justification
         saved_justification: StudentAbsenceJustificationModel = await self._create_justification(attendance_id, document_id)
@@ -228,7 +228,7 @@ class ClassAttendanceService(BaseService):
         
         return {
             "message": "Justificativa carregada com sucesso. Aguarde validação.",
-            "justification_id": str(UUID(bytes=saved_justification.id)),
+            "justification_id": str(saved_justification.id),
             "document_id": str(document_id)
         }
 
@@ -243,12 +243,12 @@ class ClassAttendanceService(BaseService):
         from src.data.repositories.document_validation_repository import DocumentValidationRepository
         doc_validation_repo: DocumentValidationRepository = DocumentValidationRepository(self.repository.session)
         doc_validation: DocumentValidationModel = DocumentValidationModel(
-            id=uuid4().bytes,
+            id=uuid4(),
             created_at=DateTimeHandler.now(),
             updated_at=None,
             rejection_reason=None,
             document_validation_status_type_id=1,
-            document_id=UUID(bytes=saved_doc.id)
+            document_id=saved_doc.id
         )
         await doc_validation_repo.create(doc_validation)
 

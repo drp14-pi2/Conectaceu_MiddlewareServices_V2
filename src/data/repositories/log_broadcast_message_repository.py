@@ -1,4 +1,6 @@
 """Broadcast message log repository - Insert only"""
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from src.data.models.log_broadcast_message_model import LogBroadcastMessageModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -20,7 +22,7 @@ class LogBroadcastMessageRepository(BaseRepository):
         sent_whatsapp: bool,
         sent_email: bool,
         sent_sms: bool,
-        user_id: bytes,
+        user_id: UUID,
         user_ip_address: str
     ) -> LogBroadcastMessageModel:
         """Log a broadcast message"""

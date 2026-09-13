@@ -54,7 +54,7 @@ class CourseService(BaseService):
                     workload=saved_model.workload,
                     active=saved_model.active,
                     user_ip_address=user_ip_address or "unknown",
-                    user_id=created_by_user_id.bytes
+                    user_id=created_by_user_id
                 )
             
             self.repository.session.commit()
@@ -102,7 +102,7 @@ class CourseService(BaseService):
 
             for component in components:
                 if component.active:
-                    await self.component_repo.deactivate(UUID(bytes=component.id))
+                    await self.component_repo.deactivate(component.id)
                     deactivated_components_count += 1
             
             # Deactivate the course
@@ -174,7 +174,7 @@ class CourseService(BaseService):
 
             components: List[CourseComponentModel] = await self.component_repo.get_by_course_id(course_id)
             result = CourseList(
-                id=UUID(bytes=course.id),
+                id=course.id,
                 name=course.name,
                 workload=course.workload,
                 active=course.active,

@@ -1,7 +1,7 @@
 """Document validation model"""
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class DocumentValidationModel(UuidPkUpdatableBaseModel):
     __tablename__ = "document_validation"
@@ -10,4 +10,4 @@ class DocumentValidationModel(UuidPkUpdatableBaseModel):
     
     # Foreign keys
     document_validation_status_type_id = Column(Integer, ForeignKey('document_validation_status_type.id'), nullable=False)
-    document_id = Column(BINARY(16), ForeignKey('document.id'), nullable=False)
+    document_id = Column(UUIDBinary, ForeignKey('document.id'), nullable=False)

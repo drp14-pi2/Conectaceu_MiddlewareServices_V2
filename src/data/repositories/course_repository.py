@@ -37,8 +37,8 @@ class CourseRepository(BaseRepository[CourseModel]):
         if educator_id:
             conditions.append(
                 or_(
-                    CourseModel.responsible_educator_1 == educator_id.bytes,
-                    CourseModel.responsible_educator_2 == educator_id.bytes
+                    CourseModel.responsible_educator_1 == educator_id,
+                    CourseModel.responsible_educator_2 == educator_id
                 )
             )
         if shift_type_id is not None:
@@ -69,7 +69,3 @@ class CourseRepository(BaseRepository[CourseModel]):
             self.session.flush()
             return True
         return False
-    
-    async def get_by_educator(self, educator_id: UUID, skip: int = 0, limit: int = 100) -> List[CourseModel]:
-        """Get all courses where user is responsible educator"""
-        return await self.find_by_filters(educator_id=educator_id, skip=skip, limit=limit)

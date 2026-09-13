@@ -1,4 +1,6 @@
 """Document request log repository - Insert only"""
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from src.data.models.log_document_request_model import LogDocumentRequestModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -11,8 +13,8 @@ class LogDocumentRequestRepository(BaseRepository):
     
     async def log(
         self,
-        document_id: bytes,
-        user_id: bytes,
+        document_id: UUID,
+        user_id: UUID,
         user_ip_address: str
     ) -> LogDocumentRequestModel:
         """Log a document request"""

@@ -15,14 +15,14 @@ class UserCourseRepository(BaseRepository[UserCourseModel]):
     
     async def get_by_user_id(self, user_id: UUID) -> List[UserCourseModel]:
         """Get all enrollments for a user"""
-        stmt = select(UserCourseModel).where(UserCourseModel.user_id == user_id.bytes)
+        stmt = select(UserCourseModel).where(UserCourseModel.user_id == user_id)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_user_id(self, user_id: UUID) -> List[UserCourseModel]:
         """Get active enrollments for a user"""
         stmt = select(UserCourseModel).where(
-            UserCourseModel.user_id == user_id.bytes,
+            UserCourseModel.user_id == user_id,
             UserCourseModel.active == True
         )
         result = self.session.execute(stmt)
@@ -30,14 +30,14 @@ class UserCourseRepository(BaseRepository[UserCourseModel]):
     
     async def get_by_course_id(self, course_id: UUID) -> List[UserCourseModel]:
         """Get all enrollments for a course"""
-        stmt = select(UserCourseModel).where(UserCourseModel.course_id == course_id.bytes)
+        stmt = select(UserCourseModel).where(UserCourseModel.course_id == course_id)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
     
     async def get_active_by_course_id(self, course_id: UUID) -> List[UserCourseModel]:
         """Get active enrollments for a course"""
         stmt = select(UserCourseModel).where(
-            UserCourseModel.course_id == course_id.bytes,
+            UserCourseModel.course_id == course_id,
             UserCourseModel.active == True
         )
         result = self.session.execute(stmt)
@@ -46,8 +46,8 @@ class UserCourseRepository(BaseRepository[UserCourseModel]):
     async def get_by_user_and_course(self, user_id: UUID, course_id: UUID) -> Optional[UserCourseModel]:
         """Get enrollment for specific user and course"""
         stmt = select(UserCourseModel).where(
-            UserCourseModel.user_id == user_id.bytes,
-            UserCourseModel.course_id == course_id.bytes
+            UserCourseModel.user_id == user_id,
+            UserCourseModel.course_id == course_id
         )
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -73,7 +73,7 @@ class UserCourseRepository(BaseRepository[UserCourseModel]):
     async def count_active_by_course_id(self, course_id: UUID) -> int:
         """Count active enrollments in a course"""
         stmt = select(func.count()).select_from(UserCourseModel).where(
-            UserCourseModel.course_id == course_id.bytes,
+            UserCourseModel.course_id == course_id,
             UserCourseModel.active == True
         )
         result = self.session.execute(stmt)

@@ -1,5 +1,6 @@
 """User activation log repository - Insert only"""
 from typing import Optional
+from uuid import UUID
 from sqlalchemy.orm import Session
 from src.data.models.log_user_activation_model import LogUserActivationModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -14,8 +15,8 @@ class LogUserActivationRepository(BaseRepository):
         self,
         deactivation_reason: Optional[str],
         activated: bool,
-        user_id: bytes,
-        performed_by_user_id: bytes,
+        user_id: UUID,
+        performed_by_user_id: UUID,
         performed_by_user_ip_address: str
     ) -> LogUserActivationModel:
         """Log a user activation/deactivation"""

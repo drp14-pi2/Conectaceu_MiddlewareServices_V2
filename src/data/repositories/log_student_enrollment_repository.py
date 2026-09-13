@@ -1,4 +1,6 @@
 """Student enrollment log repository - Insert only"""
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from src.data.models.log_student_enrollment_model import LogStudentEnrollmentModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -12,9 +14,9 @@ class LogStudentEnrollmentRepository(BaseRepository):
     async def log(
         self,
         enrolled: bool,
-        user_id: bytes,
+        user_id: UUID,
         user_ip_address: str,
-        course_id: bytes
+        course_id: UUID
     ) -> LogStudentEnrollmentModel:
         """Log a student enrollment/unenrollment"""
         log = LogStudentEnrollmentModel(

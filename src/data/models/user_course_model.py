@@ -1,7 +1,7 @@
 """User course enrollment model"""
 from sqlalchemy import Column, Boolean, ForeignKey
-from sqlalchemy.dialects.mysql import BINARY
 from src.data.db_context.base import UuidPkUpdatableBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class UserCourseModel(UuidPkUpdatableBaseModel):
     __tablename__ = "user_course"
@@ -9,5 +9,5 @@ class UserCourseModel(UuidPkUpdatableBaseModel):
     active = Column(Boolean, nullable=False, default=True)
     
     # Foreign keys
-    user_id = Column(BINARY(16), ForeignKey('user.id'), nullable=False)
-    course_id = Column(BINARY(16), ForeignKey('course.id'), nullable=False)
+    user_id = Column(UUIDBinary, ForeignKey('user.id'), nullable=False)
+    course_id = Column(UUIDBinary, ForeignKey('course.id'), nullable=False)

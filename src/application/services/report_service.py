@@ -49,7 +49,7 @@ class ReportService:
             if requested_by_user_id:
                 await self.log_report_repo.log(
                     report_type_id=1,
-                    user_id=requested_by_user_id.bytes,
+                    user_id=requested_by_user_id,
                     user_ip_address=user_ip_address or "unknown"
                 )
 
@@ -65,7 +65,7 @@ class ReportService:
                 courses = await self.course_repo.get_all()
             
             for course in courses:
-                course_uuid: UUID = UUID(bytes=course.id)
+                course_uuid: UUID = course.id
                 enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_uuid)
                 components: List[CourseComponentModel] = []
                 
@@ -79,7 +79,7 @@ class ReportService:
                     components = await self.component_repo.get_by_course_id(course_uuid)
                 
                 for enrollment in enrollments:
-                    user_uuid: UUID = UUID(bytes=enrollment.user_id)
+                    user_uuid: UUID = enrollment.user_id
                     user: UserModel | None = await self.user_repo.get_by_id(user_uuid)
                     
                     if not user:
@@ -87,11 +87,11 @@ class ReportService:
                     
                     # For each component, get the classes and check attendance
                     for component in components:
-                        component_uuid: UUID = UUID(bytes=component.id)
+                        component_uuid: UUID = component.id
                         classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_uuid)
                         
                         for class_ in classes:
-                            class_uuid = UUID(bytes=class_.id)
+                            class_uuid = class_.id
                             report_data.append({
                                 'course_id': str(course_uuid),
                                 'course_name': course.name,
@@ -121,7 +121,7 @@ class ReportService:
             if requested_by_user_id:
                 await self.log_report_repo.log(
                     report_type_id=2,
-                    user_id=requested_by_user_id.bytes,
+                    user_id=requested_by_user_id,
                     user_ip_address=user_ip_address or "unknown"
                 )
                 
@@ -137,7 +137,7 @@ class ReportService:
                 courses = await self.course_repo.get_all()
             
             for course in courses:
-                course_uuid: UUID = UUID(bytes=course.id)
+                course_uuid: UUID = course.id
                 # Count enrollments directly by course
                 enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_uuid)
                 total_enrolled: int = len(enrollments)

@@ -11,7 +11,7 @@ class StudentAbsenceJustificationRepository(BaseRepository):
 
     async def get_by_attendance_id(self, attendance_id: UUID) -> Optional[StudentAbsenceJustificationModel]:
         """Gets the justification linked to a specific attendance record."""
-        stmt = select(StudentAbsenceJustificationModel).where(StudentAbsenceJustificationModel.class_attendance_id == attendance_id.bytes)
+        stmt = select(StudentAbsenceJustificationModel).where(StudentAbsenceJustificationModel.class_attendance_id == attendance_id)
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -20,6 +20,6 @@ class StudentAbsenceJustificationRepository(BaseRepository):
         from src.data.models.class_attendance_model import ClassAttendanceModel
         stmt = select(StudentAbsenceJustificationModel).join(
             ClassAttendanceModel, StudentAbsenceJustificationModel.class_attendance_id == ClassAttendanceModel.id
-        ).where(ClassAttendanceModel.user_id == user_id.bytes).offset(skip).limit(limit)
+        ).where(ClassAttendanceModel.user_id == user_id).offset(skip).limit(limit)
         result = self.session.execute(stmt)
         return list(result.scalars().all())

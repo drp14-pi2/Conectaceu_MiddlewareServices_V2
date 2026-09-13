@@ -104,8 +104,8 @@ class LegalRepresentativeService(BaseService):
 
                 for document in documents:
                     document_validation = await self.document_validation_repo.get_by_document_id(document.id)
-                    await self.document_validation_repo.delete(bytes=document_validation.id)
-                    await self.document_repo.delete(bytes=document.id)
+                    await self.document_validation_repo.delete(document_validation.id)
+                    await self.document_repo.delete(document.id)
 
                 await self.repository.delete(representative_id)
                 self.repository.session.commit()
@@ -118,7 +118,7 @@ class LegalRepresentativeService(BaseService):
     async def _can_delete_representative(self, representative: LegalRepresentativeModel) -> bool:
         """Validates if a representative can be deleted"""
         try:
-            user: UserModel = await self.user_repo.get_by_id(UUID(bytes=representative.user_id))
+            user: UserModel = await self.user_repo.get_by_id(representative.user_id)
             is_user_of_age: bool = (DateTimeHandler.now().date() - user.birthdate.date()).days > (17 * 365)
 
             # Check if user is of age
@@ -126,7 +126,7 @@ class LegalRepresentativeService(BaseService):
                 return True;
 
             # Check if minor user has more than one legal representative
-            user_representatives_count: int = len(await self.get_user_representatives(UUID(bytes=user.id)))
+            user_representatives_count: int = len(await self.get_user_representatives(user.id))
 
             return user_representatives_count > 1
         except Exception as e:

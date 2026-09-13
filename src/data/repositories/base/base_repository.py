@@ -23,7 +23,7 @@ class BaseRepository(Generic[T]):
     
     async def get_by_id(self, id: UUID) -> Optional[T]:
         """Get entity by UUID"""
-        stmt = select(self.model_class).where(self.model_class.id == id.bytes)
+        stmt = select(self.model_class).where(self.model_class.id == id)
         result = self.session.execute(stmt)
         return result.scalar_one_or_none()
     

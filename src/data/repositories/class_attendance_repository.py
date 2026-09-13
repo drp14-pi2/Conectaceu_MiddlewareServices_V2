@@ -16,7 +16,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
     async def get_by_class_id(self, class_id: UUID) -> List[ClassAttendanceModel]:
         """Get all attendance records for a class"""
         stmt = select(ClassAttendanceModel).where(
-            ClassAttendanceModel.class_id == class_id.bytes
+            ClassAttendanceModel.class_id == class_id
         )
         result = self.session.execute(stmt)
         return list(result.scalars().all())
@@ -24,7 +24,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
     async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[ClassAttendanceModel]:
         """Get all attendance records for a user"""
         stmt = select(ClassAttendanceModel).where(
-            ClassAttendanceModel.user_id == user_id.bytes
+            ClassAttendanceModel.user_id == user_id
         ).offset(skip).limit(limit)
         result = self.session.execute(stmt)
         return list(result.scalars().all())
@@ -33,8 +33,8 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         """Get attendance record for specific user and class"""
         stmt = select(ClassAttendanceModel).where(
             and_(
-                ClassAttendanceModel.user_id == user_id.bytes,
-                ClassAttendanceModel.class_id == class_id.bytes
+                ClassAttendanceModel.user_id == user_id,
+                ClassAttendanceModel.class_id == class_id
             )
         )
         result = self.session.execute(stmt)
@@ -60,7 +60,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         stmt = select(
             func.count().label('total'),
             func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
-        ).where(ClassAttendanceModel.class_id == class_id.bytes)
+        ).where(ClassAttendanceModel.class_id == class_id)
         
         result = self.session.execute(stmt)
         row = result.first()
@@ -82,8 +82,8 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
         ).where(
             and_(
-                ClassAttendanceModel.user_id == user_id.bytes,
-                ClassAttendanceModel.class_id == class_id.bytes
+                ClassAttendanceModel.user_id == user_id,
+                ClassAttendanceModel.class_id == class_id
             )
         )
         

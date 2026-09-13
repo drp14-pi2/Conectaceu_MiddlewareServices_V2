@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 class DocumentBase(BaseModel):
-    base64: str = Field(max_length=20_000_000)
+    base64: str = Field(max_length=16_000_000)
     document_type_id: int
     is_front: Optional[bool] = None
 

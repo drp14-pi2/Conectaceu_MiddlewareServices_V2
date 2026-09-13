@@ -92,7 +92,7 @@ class PasswordResetService:
             
             return {
                 "valid": True,
-                "user_id": str(UUID(bytes=user.id)),
+                "user_id": str(user.id),
                 "message": "Token válido"
             }
         except Exception as e:

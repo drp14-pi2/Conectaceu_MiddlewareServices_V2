@@ -14,7 +14,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
         """Get the user at the front of the waiting list for a class."""
         stmt = (
             select(EnrollmentWaitingListModel)
-            .where(EnrollmentWaitingListModel.course_id == course_id.bytes)
+            .where(EnrollmentWaitingListModel.course_id == course_id)
             .order_by(EnrollmentWaitingListModel.position)
             .limit(1)
         )
@@ -25,8 +25,8 @@ class EnrollmentWaitingListRepository(BaseRepository):
         """Check if user is already on the waiting list."""
         stmt = select(EnrollmentWaitingListModel).where(
             and_(
-                EnrollmentWaitingListModel.user_id == user_id.bytes,
-                EnrollmentWaitingListModel.course_id == course_id.bytes
+                EnrollmentWaitingListModel.user_id == user_id,
+                EnrollmentWaitingListModel.course_id == course_id
             )
         )
         result = self.session.execute(stmt)
@@ -36,7 +36,7 @@ class EnrollmentWaitingListRepository(BaseRepository):
         """Get the last position number for a class."""
         stmt = (
             select(func.max(EnrollmentWaitingListModel.position))
-            .where(EnrollmentWaitingListModel.course_id == course_id.bytes)
+            .where(EnrollmentWaitingListModel.course_id == course_id)
         )
         result = self.session.execute(stmt)
         last = result.scalar()

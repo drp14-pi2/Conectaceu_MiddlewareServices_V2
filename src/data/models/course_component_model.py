@@ -1,7 +1,7 @@
 """Course component model"""
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
-from sqlalchemy.dialects.mysql import BINARY
+from sqlalchemy import Column, String, Boolean, ForeignKey
 from src.data.db_context.base import UuidPkUpdatableBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class CourseComponentModel(UuidPkUpdatableBaseModel):
     __tablename__ = "course_component"
@@ -11,4 +11,4 @@ class CourseComponentModel(UuidPkUpdatableBaseModel):
     active = Column(Boolean, nullable=False, default=True)
     
     # Foreign keys
-    course_id = Column(BINARY(16), ForeignKey('course.id'), nullable=False)
+    course_id = Column(UUIDBinary, ForeignKey('course.id'), nullable=False)
