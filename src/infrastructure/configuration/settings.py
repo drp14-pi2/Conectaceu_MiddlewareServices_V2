@@ -63,6 +63,10 @@ class AppSettings(BaseSettings):
     FAILED_LOGIN_MAX_ATTEMPTS: int = Field(default = 5)
     FAILED_LOGIN_ATTEMPTS_TIMEOUT_MINUTES: int = Field(default = 10)
 
+    # Document requests
+    MAX_DOCUMENT_REQUESTS: int = Field(default = 20)
+    DOCUMENT_REQUESTS_TIMEOUT_MINUTES: int = Field(default = 30)
+
     # Student deactivation base on unjustified absences
     ABSENCE_DAYS: int = Field(default=7)
     MIN_CONSECUTIVE_UNJUSTIFIED: int = Field(default=3)

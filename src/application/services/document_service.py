@@ -16,8 +16,10 @@ from src.application.services.base_service import BaseService
 from src.data.repositories.user_repository import UserRepository
 from src.domain.constants.document_types import DocumentTypes
 from src.domain.schemas.document import Document, DocumentCreate
+from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.handlers.format_handler import FormatHandler
+from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
 
 class DocumentService(BaseService):
     """Service for Document business logic"""
@@ -26,12 +28,14 @@ class DocumentService(BaseService):
         self,
         repository: DocumentRepository,
         user_repo: UserRepository,
-        address_repo: AddressRepository
+        address_repo: AddressRepository,
+        log_doc_request_repo: LogDocumentRequestRepository
     ):
         super().__init__(repository, 'document', mapper_class=DocumentMapper)
         self.repository = repository
         self.user_repo = user_repo
         self.address_repo = address_repo
+        self.log_doc_request_repo = log_doc_request_repo
     
     async def upload_document(self, dto: DocumentCreate) -> Document:
         """Upload a new document"""
@@ -102,14 +106,28 @@ class DocumentService(BaseService):
     ) -> Document:
         """Get document and log the request"""
         try:
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user:
+                raise ValueError('Usuário não encontrado')
+
+            document_requests_timeout_minutes: int = settings.DOCUMENT_REQUESTS_TIMEOUT_MINUTES
+
+            # Validates student document request amount
+            if user.user_type_id == 5 and await self.log_doc_request_repo.has_exceeded_requests(
+                minutes=document_requests_timeout_minutes,
+                max_requests=settings.MAX_DOCUMENT_REQUESTS,
+                user_id=user_id
+            ):
+                raise ValueError(f"Quantidade de pedidos de documentos excedida. Tente novamente depois de {document_requests_timeout_minutes} minutos")
+            
             document: DocumentModel = await self.repository.get_by_id(document_id)
+
             if not document:
                 raise ValueError("Nenhum documento encontrado")
             
             # Log document request
-            from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
-            log_repo = LogDocumentRequestRepository(self.repository.session)
-            await log_repo.log(
+            await self.log_doc_request_repo.log(
                 document_id=document.id,
                 user_id=user_id,
                 user_ip_address=user_ip_address
@@ -129,6 +147,21 @@ class DocumentService(BaseService):
     ) -> List[Document]:
         """Get a document by type"""
         try:
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user:
+                raise ValueError('Usuário não encontrado')
+
+            document_requests_timeout_minutes: int = settings.DOCUMENT_REQUESTS_TIMEOUT_MINUTES
+
+            # Validates student document request amount
+            if user.user_type_id == 5 and await self.log_doc_request_repo.has_exceeded_requests(
+                minutes=document_requests_timeout_minutes,
+                max_requests=settings.MAX_DOCUMENT_REQUESTS,
+                user_id=user_id
+            ):
+                raise ValueError(f"Quantidade de pedidos de documentos excedida. Tente novamente depois de {document_requests_timeout_minutes} minutos")
+
             models = await self.repository.get_by_type(user_id, document_type_id)
 
             if not models or len(models) <= 0:
