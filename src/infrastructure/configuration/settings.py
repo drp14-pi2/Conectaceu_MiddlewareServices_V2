@@ -61,7 +61,7 @@ class AppSettings(BaseSettings):
 
     # Failed login attempts
     FAILED_LOGIN_MAX_ATTEMPTS: int = Field(default = 5)
-    FAILED_LOGIN_ATTEMPTS_TIMEOUT_MINUTES: int = Field(default = 10)
+    FAILED_LOGIN_ATTEMPTS_TIMEOUT_MINUTES: int = Field(default = 30)
 
     # Document requests
     MAX_DOCUMENT_REQUESTS: int = Field(default = 20)
