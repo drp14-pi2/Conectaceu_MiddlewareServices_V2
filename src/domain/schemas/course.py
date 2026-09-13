@@ -9,7 +9,9 @@ class CourseBase(BaseModel):
     name: str = Field(min_length=3, max_length=100)
     total_seat_limit: int = Field(ge=1)
     workload: int = Field(ge=1)
-    shift_type_id: int
+    min_student_age: int = Field(ge=1)
+    max_student_age: int = Field(ge=1)
+    shift_type_id: int = Field(ge=1)
 
 class CourseCreate(CourseBase):
     responsible_educator_1: UUID

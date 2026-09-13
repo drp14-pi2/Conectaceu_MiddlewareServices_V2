@@ -40,6 +40,18 @@ class CourseService(BaseService):
             # Validate workload
             if dto.workload < 1:
                 raise ValueError("Carga horária deve ser de pelo menos 1 (uma) hora")
+
+            # Validate age group
+            if dto.min_student_age < 0:
+                raise ValueError("Idade mínima inválida")
+
+            if dto.min_student_age > dto.max_student_age:
+                raise ValueError("Idade mínima não pode ser maior que a máxima")
+
+            MAX_STUDENT_AGE_ALLOWED: int = 100
+
+            if dto.max_student_age > MAX_STUDENT_AGE_ALLOWED:
+                raise ValueError(f"Idade máxima inválida. Limite: {MAX_STUDENT_AGE_ALLOWED}")
             
             model: CourseModel = CourseMapper.create_to_model(dto)
             saved_model: CourseModel = await self.repository.create(model)
@@ -177,7 +189,6 @@ class CourseService(BaseService):
                 id=course.id,
                 name=course.name,
                 workload=course.workload,
-                active=course.active,
                 shift_type_id=course.shift_type_id,
                 total_seat_limit=course.total_seat_limit,
                 components=[CourseComponentMapper.model_to_schema(c) for c in components]

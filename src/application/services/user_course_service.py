@@ -7,9 +7,11 @@ from src.application.mappers.user_course_mapper import UserCourseMapper
 from src.data.models.course_model import CourseModel
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.models.user_course_model import UserCourseModel
+from src.data.models.user_model import UserModel
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
 from src.domain.schemas.user_course import UserCourse, UserCourseBulkCreate, UserCourseCreate
 from src.infrastructure.configuration.settings import settings
@@ -21,11 +23,13 @@ class UserCourseService(BaseService):
     def __init__(
         self,
         repository: UserCourseRepository,
+        user_repo: UserRepository,
         course_repo: CourseRepository,
         waiting_list_repo: EnrollmentWaitingListRepository
     ):
         super().__init__(repository, 'user_course', mapper_class=UserCourseMapper)
         self.repository = repository
+        self.user_repo = user_repo
         self.course_repo = course_repo
         self.waiting_list_repo = waiting_list_repo
     
@@ -41,6 +45,11 @@ class UserCourseService(BaseService):
         try:
             user_id: UUID = dto.user_id
             course_id: UUID = dto.course_id
+            course: CourseModel | None = await self.course_repo.get_by_id(course_id)
+
+            if not course:
+                raise ValueError('Curso não encontrado')
+
             # Validate if enrolling is allowed in the current month
             currentMonth: int = DateTimeHandler.now().date().month
 
@@ -54,6 +63,9 @@ class UserCourseService(BaseService):
                 if existingEnrollment.active:
                     raise ValueError("Usuário já matriculado")
                 else:
+                    # Validate enrollment rules
+                    await self._validate_enrollment_rules(user_id, course_id)
+
                     # Reactivate enrollment
                     existingEnrollment.active = True
                     saved_model = await self.repository.update(existingEnrollment)
@@ -64,7 +76,6 @@ class UserCourseService(BaseService):
             # Validate enrollment rules
             await self._validate_enrollment_rules(user_id, course_id)
             # Check if course has available seats
-            course: CourseModel | None = await self.course_repo.get_by_id(course_id)
             enrollments: List[UserCourseModel] = await self.repository.get_active_by_course_id(course_id)
 
             if len(enrollments) >= course.total_seat_limit:
@@ -302,6 +313,27 @@ class UserCourseService(BaseService):
         2. Cannot enroll in multiple courses with the same shift
         """
         try:
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user:
+                raise ValueError('Usuário não encontrado')
+
+            new_course: CourseModel | None = await self.course_repo.get_by_id(new_course_id)
+
+            if not new_course:
+                raise ValueError('Curso inválido')
+
+            # Validate if user is in allowed age group
+            today = DateTimeHandler.now().date()
+            birth = user.birthdate.date()
+            user_age: int = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+
+            if user_age < new_course.min_student_age:
+                raise ValueError('Idade do usuário é inferior ao permitido para esse curso')
+
+            if user_age > new_course.max_student_age:
+                raise ValueError('Idade do usuário é superior ao permitido para esse curso')
+            
             # Get user's active enrollments
             active_enrollments: List[UserCourseModel] = await self.repository.get_active_by_user_id(user_id)
             
@@ -311,7 +343,6 @@ class UserCourseService(BaseService):
             
             for active_enrollment in active_enrollments:
                 active_course: CourseModel | None = await self.course_repo.get_by_id(active_enrollment.course_id)
-                new_course: CourseModel | None = await self.course_repo.get_by_id(new_course_id)
 
                 if new_course.name == active_course.name:
                     raise ValueError("Aluno já tem matricula para este curso em outro turno")

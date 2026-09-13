@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.application.services.user_course_service import UserCourseService
 from src.data.repositories.course_repository import CourseRepository
+from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.user_course_repository import UserCourseRepository
 from src.data.db_context.database import get_db
@@ -22,10 +23,11 @@ router = APIRouter(
 def get_user_course_service(db: Session = Depends(get_db)) -> UserCourseService:
     """Dependency injection for UserCourseService"""
     repository = UserCourseRepository(db)
+    user_repo = UserRepository(db)
     course_repo = CourseRepository(db)
     waiting_list_repo = EnrollmentWaitingListRepository(db)
 
-    return UserCourseService(repository, course_repo, waiting_list_repo)
+    return UserCourseService(repository, user_repo, course_repo, waiting_list_repo)
 
 @router.post("/", response_model=UserCourse, status_code=status.HTTP_201_CREATED)
 async def enroll_user(
