@@ -13,6 +13,7 @@ from src.api.middleware.error_logging_middleware import ErrorLoggingMiddleware
 from src.infrastructure.configuration.settings import settings
 from src.data.db_context.database import engine
 from src.api.middleware.exception_handler import register_exception_handlers
+from src.api.middleware.request_size_limit_middleware import RequestSizeLimitMiddleware
 
 # Import all routers
 from src.api.controllers.auth_controller import router as auth_router
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     
     # Register error logging middleware
     app.add_middleware(ErrorLoggingMiddleware)
+    app.add_middleware(RequestSizeLimitMiddleware, max_size_mb=settings.MAX_REQUEST_SIZE_MB)
     
     # Register exception handlers
     register_exception_handlers(app)

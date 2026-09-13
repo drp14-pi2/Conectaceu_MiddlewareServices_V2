@@ -23,6 +23,7 @@ class AppSettings(BaseSettings):
     JWT_ALGORITHM: str = Field(default="")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=0)
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=0)
+    MAX_REQUEST_SIZE_MB: int = Field(default=10)
     
     # App configuration
     APP_NAME: str = Field(default="ConectaCEU")
