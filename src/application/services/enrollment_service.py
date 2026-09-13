@@ -71,7 +71,7 @@ class EnrollmentService(BaseService):
                     saved_model = await self.repository.update(existingEnrollment)
                     self.repository.session.commit()
 
-                    return UserCourseMapper.model_to_schema(saved_model)
+                    return EnrollmentMapper.model_to_schema(saved_model)
             
             # Validate enrollment rules
             await self._validate_enrollment_rules(user_id, course_id)
@@ -82,7 +82,7 @@ class EnrollmentService(BaseService):
                 return await self._add_to_waiting_list(user_id, course_id)
 
             # Create new enrollment
-            create_model: EnrollmentModel = UserCourseMapper.create_to_model(dto)
+            create_model: EnrollmentModel = EnrollmentMapper.create_to_model(dto)
             saved_model: EnrollmentModel = await self.repository.create(create_model)
 
             # Log creation
@@ -98,7 +98,7 @@ class EnrollmentService(BaseService):
             
             self.repository.session.commit()
             
-            return UserCourseMapper.model_to_schema(saved_model)
+            return EnrollmentMapper.model_to_schema(saved_model)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
@@ -181,7 +181,7 @@ class EnrollmentService(BaseService):
         try:
             models = await self.repository.get_by_user_id(user_id)
 
-            return [UserCourseMapper.model_to_schema(model) for model in models]
+            return [EnrollmentMapper.model_to_schema(model) for model in models]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -211,7 +211,7 @@ class EnrollmentService(BaseService):
         try:
             models: List[EnrollmentModel] = await self.repository.get_active_by_course_id(course_id)
             
-            return [UserCourseMapper.model_to_schema(model) for model in models]
+            return [EnrollmentMapper.model_to_schema(model) for model in models]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
