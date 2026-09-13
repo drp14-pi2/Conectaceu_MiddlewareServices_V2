@@ -3,8 +3,8 @@ from sqlalchemy import Column, Boolean, ForeignKey
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 from src.data.db_context.types import UUIDBinary
 
-class UserCourseModel(UuidPkUpdatableBaseModel):
-    __tablename__ = "user_course"
+class EnrollmentModel(UuidPkUpdatableBaseModel):
+    __tablename__ = "enrollment"
     
     active = Column(Boolean, nullable=False, default=True)
     

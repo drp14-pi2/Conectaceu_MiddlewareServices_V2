@@ -9,7 +9,7 @@ from src.application.services.class_attendance_service import ClassAttendanceSer
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.db_context.database import get_db
@@ -26,7 +26,7 @@ router = APIRouter(
 
 def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceService:
     repository = ClassAttendanceRepository(db)
-    user_course_repo = UserCourseRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
     class_repo = ClassRepository(db)
     component_repo = CourseComponentRepository(db)
     document_repo = DocumentRepository(db)
@@ -34,7 +34,7 @@ def get_attendance_service(db: Session = Depends(get_db)) -> ClassAttendanceServ
 
     return ClassAttendanceService(
         repository,
-        user_course_repo,
+        enrollment_repo,
         class_repo,
         component_repo,
         document_repo,

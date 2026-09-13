@@ -7,7 +7,7 @@ from src.application.services.broadcast_service import BroadcastService
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.user_repository import UserRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
 from src.domain.constants.permission_types import PermissionTypes
 from src.domain.schemas.broadcast_message import BroadcastMessageCreate
@@ -26,7 +26,7 @@ router = APIRouter(
 def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
     """Dependency injection for BroadcastService"""
     user_repo = UserRepository(db)
-    user_course_repo = UserCourseRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
     log_repo = LogBroadcastMessageRepository(db)
     component_repo = CourseComponentRepository(db),
     class_repo = ClassRepository(db),
@@ -36,7 +36,7 @@ def get_broadcast_service(db: Session = Depends(get_db)) -> BroadcastService:
     
     return BroadcastService(
         user_repo,
-        user_course_repo,
+        enrollment_repo,
         log_repo,
         component_repo,
         class_repo,

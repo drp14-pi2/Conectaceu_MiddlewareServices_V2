@@ -8,7 +8,7 @@ from src.application.services.class_service import ClassService
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.class_ import Class, ClassBulkCreate, ClassFilter
@@ -24,10 +24,10 @@ def get_class_service(db: Session = Depends(get_db)) -> ClassService:
     """Dependency injection for ClassService"""
     class_repo = ClassRepository(db)
     component_repo = CourseComponentRepository(db)
-    user_course_repo = UserCourseRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
     course_repo = CourseRepository(db)
 
-    return ClassService(class_repo, component_repo, user_course_repo, course_repo)
+    return ClassService(class_repo, component_repo, enrollment_repo, course_repo)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def bulk_create_classes(

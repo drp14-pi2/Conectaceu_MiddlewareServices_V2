@@ -9,11 +9,11 @@ from src.application.services.base_service import BaseService
 from src.data.models.class_model import ClassModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.course_model import CourseModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.domain.schemas.class_ import Class, ClassBulkCreate, ClassCreate, ClassFilter, ClassUpdate
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
@@ -24,13 +24,13 @@ class ClassService(BaseService):
         self,
         repository: ClassRepository,
         component_repo: CourseComponentRepository,
-        user_course_repo: UserCourseRepository,
+        enrollment_repo: EnrollmentRepository,
         course_repo: CourseRepository
     ):
         super().__init__(repository, 'class_', mapper_class=ClassMapper)
         self.repository = repository
         self.component_repo = component_repo
-        self.user_course_repo = user_course_repo
+        self.enrollment_repo = enrollment_repo
         self.course_repo = course_repo
     
     async def create_class(self, dto: ClassCreate) -> Class:
@@ -145,12 +145,12 @@ class ClassService(BaseService):
                 raise ValueError("Class already deactivated")
             
             # Get all active enrollments for this class
-            active_enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_id)
+            active_enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_course_id(course_id)
             
             # Deactivate all enrollments and log the action
             for enrollment in active_enrollments:
                 enrollment.active = False
-                await self.user_course_repo.update(enrollment)
+                await self.enrollment_repo.update(enrollment)
             
             # Deactivate the class
             result = await self.repository.deactivate(course_id)

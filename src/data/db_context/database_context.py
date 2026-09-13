@@ -12,7 +12,7 @@ from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_type_repository import DocumentTypeRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
@@ -54,7 +54,7 @@ class DatabaseContext:
         self.course_components = CourseComponentRepository(self.session)
         self.classes = ClassRepository(self.session)
         self.class_attendances = ClassAttendanceRepository(self.session)
-        self.user_courses = UserCourseRepository(self.session)
+        self.enrollments = EnrollmentRepository(self.session)
         self.documents = DocumentRepository(self.session)
         self.document_types = DocumentTypeRepository(self.session)
         self.document_validations = DocumentValidationRepository(self.session)

@@ -5,12 +5,12 @@ from uuid import UUID
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.class_model import ClassModel
 from src.data.models.course_component_model import CourseComponentModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.user_repository import UserRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
 from src.domain.schemas.broadcast_message import BroadcastMessageCreate, BroadcastDocument
 from src.infrastructure.messaging.email.email_service import EmailService
@@ -23,7 +23,7 @@ class BroadcastService:
     def __init__(
         self,
         user_repo: UserRepository,
-        user_course_repo: UserCourseRepository,
+        enrollment_repo: EnrollmentRepository,
         log_repo: LogBroadcastMessageRepository,
         component_repo: CourseComponentRepository,
         class_repo: ClassRepository,
@@ -32,7 +32,7 @@ class BroadcastService:
         whatsapp_service: WhatsAppService
     ):
         self.user_repo = user_repo
-        self.user_course_repo = user_course_repo
+        self.enrollment_repo = enrollment_repo
         self.log_repo = log_repo
         self.component_repo = component_repo
         self.class_repo = class_repo
@@ -229,13 +229,13 @@ class BroadcastService:
                         seen_ids.add(user.id)
                         yield user
 
-    async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[UserCourseModel, None]:
+    async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[EnrollmentModel, None]:
         """Stream active enrollments for a class"""
         page_size: int = 100
         page: int = 0
         
         while True:
-            enrollments: UserCourseModel = await self.user_course_repo.get_active_by_course_id(
+            enrollments: EnrollmentModel = await self.enrollment_repo.get_active_by_course_id(
                 course_id,
                 skip=page * page_size,
                 limit=page_size

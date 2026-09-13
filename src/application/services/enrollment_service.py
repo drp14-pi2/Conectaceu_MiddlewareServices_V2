@@ -3,31 +3,31 @@ from typing import Any, List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
-from src.application.mappers.user_course_mapper import UserCourseMapper
+from src.application.mappers.enrollment_mapper import EnrollmentMapper
 from src.data.models.course_model import CourseModel
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
-from src.domain.schemas.user_course import UserCourse, UserCourseBulkCreate, UserCourseCreate
+from src.domain.schemas.enrollment import Enrollment, EnrollmentBulkCreate, EnrollmentCreate
 from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 
-class UserCourseService(BaseService):
+class EnrollmentService(BaseService):
     """Service for User Course enrollment business logic"""
     
     def __init__(
         self,
-        repository: UserCourseRepository,
+        repository: EnrollmentRepository,
         user_repo: UserRepository,
         course_repo: CourseRepository,
         waiting_list_repo: EnrollmentWaitingListRepository
     ):
-        super().__init__(repository, 'user_course', mapper_class=UserCourseMapper)
+        super().__init__(repository, 'user_course', mapper_class=EnrollmentMapper)
         self.repository = repository
         self.user_repo = user_repo
         self.course_repo = course_repo
@@ -35,12 +35,12 @@ class UserCourseService(BaseService):
     
     async def enroll_user(
         self,
-        dto: UserCourseCreate,
+        dto: EnrollmentCreate,
         enrolled_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
-    ) -> UserCourse:
+    ) -> Enrollment:
         """Enroll a user in a course with validation"""
-        saved_model: UserCourseModel
+        saved_model: EnrollmentModel
         
         try:
             user_id: UUID = dto.user_id
@@ -57,7 +57,7 @@ class UserCourseService(BaseService):
                 raise PermissionError('O período de matrículas já se encerrou')
             
             # Check if already enrolled
-            existingEnrollment: UserCourseModel | None = await self.repository.get_by_user_and_course(user_id, course_id)
+            existingEnrollment: EnrollmentModel | None = await self.repository.get_by_user_and_course(user_id, course_id)
 
             if existingEnrollment:
                 if existingEnrollment.active:
@@ -76,14 +76,14 @@ class UserCourseService(BaseService):
             # Validate enrollment rules
             await self._validate_enrollment_rules(user_id, course_id)
             # Check if course has available seats
-            enrollments: List[UserCourseModel] = await self.repository.get_active_by_course_id(course_id)
+            enrollments: List[EnrollmentModel] = await self.repository.get_active_by_course_id(course_id)
 
             if len(enrollments) >= course.total_seat_limit:
                 return await self._add_to_waiting_list(user_id, course_id)
 
             # Create new enrollment
-            create_model: UserCourseModel = UserCourseMapper.create_to_model(dto)
-            saved_model: UserCourseModel = await self.repository.create(create_model)
+            create_model: EnrollmentModel = UserCourseMapper.create_to_model(dto)
+            saved_model: EnrollmentModel = await self.repository.create(create_model)
 
             # Log creation
             if enrolled_by_user_id:
@@ -102,7 +102,7 @@ class UserCourseService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    async def bulk_enroll(self, dto: UserCourseBulkCreate) -> dict[str, Any]:
+    async def bulk_enroll(self, dto: EnrollmentBulkCreate) -> dict[str, Any]:
         """Bulk enroll users after validation"""
         try:
             validation: dict[str, Any] = await self._validate_bulk_enrollment(UUID(dto.course_id), dto.user_ids)
@@ -115,11 +115,11 @@ class UserCourseService(BaseService):
                     'enrolled': []
                 }
             
-            enrolled: List[UserCourse] = []
+            enrolled: List[Enrollment] = []
 
             for user_id in dto.user_ids:
-                enroll_dto: UserCourseCreate = UserCourseCreate(user_id=user_id, course_id=dto.course_id)
-                result: UserCourse = await self.enroll_user(enroll_dto)
+                enroll_dto: EnrollmentCreate = EnrollmentCreate(user_id=user_id, course_id=dto.course_id)
+                result: Enrollment = await self.enroll_user(enroll_dto)
                 enrolled.append(result)
             
             self.repository.session.commit()
@@ -143,7 +143,7 @@ class UserCourseService(BaseService):
     ) -> bool:
         """Unenroll a user from a course"""
         try:
-            enrollment: UserCourseModel | None = await self.repository.get_by_id(enrollment_id)
+            enrollment: EnrollmentModel | None = await self.repository.get_by_id(enrollment_id)
 
             if not enrollment:
                 raise ValueError("Enrollment not found")
@@ -176,7 +176,7 @@ class UserCourseService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_enrollments(self, user_id: UUID) -> List[UserCourse]:
+    async def get_user_enrollments(self, user_id: UUID) -> List[Enrollment]:
         """Get all enrollments for a user"""
         try:
             models = await self.repository.get_by_user_id(user_id)
@@ -189,7 +189,7 @@ class UserCourseService(BaseService):
         """Get user's active enrollments with course and shift details"""
         try:
             enrollments_with_details: List[dict[str, Any]] = []
-            active_enrollments: List[UserCourseModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
 
             for enrollment in active_enrollments:
                 course: CourseModel | None = await self.course_repo.get_by_id(enrollment.course_id)
@@ -206,10 +206,10 @@ class UserCourseService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_active_course_enrollments(self, course_id: UUID) -> List[UserCourse]:
+    async def get_active_course_enrollments(self, course_id: UUID) -> List[Enrollment]:
         """Get active enrollments for a course"""
         try:
-            models: List[UserCourseModel] = await self.repository.get_active_by_course_id(course_id)
+            models: List[EnrollmentModel] = await self.repository.get_active_by_course_id(course_id)
             
             return [UserCourseMapper.model_to_schema(model) for model in models]
         except Exception as e:
@@ -261,7 +261,7 @@ class UserCourseService(BaseService):
             if not course.active:
                 return {'valid': False, 'reason': 'Curso inativo'}
             
-            enrollments: List[UserCourseModel] = await self.repository.get_active_by_course_id(course_id)
+            enrollments: List[EnrollmentModel] = await self.repository.get_active_by_course_id(course_id)
             available_seats: int = course.total_seat_limit - len(enrollments)
             requested: int = len(user_ids)
             
@@ -280,7 +280,7 @@ class UserCourseService(BaseService):
             for user_id in user_ids:
                 try:
                     user_uuid: UUID = UUID(user_id)
-                    existing: UserCourseModel | None = await self.repository.get_by_user_and_course(user_uuid, course_id)
+                    existing: EnrollmentModel | None = await self.repository.get_by_user_and_course(user_uuid, course_id)
 
                     if existing and existing.active:
                         troubledEnrollments.append({'user_id': user_id, 'issue': 'Already enrolled'})
@@ -335,7 +335,7 @@ class UserCourseService(BaseService):
                 raise ValueError('Idade do usuário é superior ao permitido para esse curso')
             
             # Get user's active enrollments
-            active_enrollments: List[UserCourseModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
             
             # Maximum 3 of enrollments
             if len(active_enrollments) >= self._get_maximum_enrollments_count():
@@ -388,5 +388,5 @@ class UserCourseService(BaseService):
             await self.waiting_list_repo.remove_user(user_id, course_id)
             
             # Enroll
-            dto = UserCourseCreate(user_id=str(user_id), course_id=str(course_id))
+            dto = EnrollmentCreate(user_id=str(user_id), course_id=str(course_id))
             await self.enroll_user(dto)

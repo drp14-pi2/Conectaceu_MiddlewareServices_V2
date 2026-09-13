@@ -8,7 +8,7 @@ from src.application.services.report_service import ReportService
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.log_report_request_repository import LogReportRequestRepository
 from src.data.db_context.database import get_db
@@ -25,7 +25,7 @@ def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     """Dependency injection for ReportService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)
-    user_course_repo = UserCourseRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
     user_repo = UserRepository(db)
     class_repo = ClassRepository(db)
     log_report_repo = LogReportRequestRepository(db)
@@ -33,7 +33,7 @@ def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     return ReportService(
         course_repo,
         component_repo,
-        user_course_repo,
+        enrollment_repo,
         user_repo,
         class_repo,
         log_report_repo

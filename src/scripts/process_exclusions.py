@@ -22,7 +22,7 @@ from src.data.models.course_model import CourseModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.class_model import ClassModel
 from src.data.models.class_attendance_model import ClassAttendanceModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_type_model import DocumentTypeModel
 from src.data.models.document_validation_model import DocumentValidationModel
@@ -104,11 +104,11 @@ async def process_exclusions():
                 user.document = get_anonymized_unique_value(user_id)
 
             # Unenroll from all active classes
-            from src.data.models.user_course_model import UserCourseModel
+            from src.data.models.enrollment_model import EnrollmentModel
 
-            stmt = select(UserCourseModel).where(
-                UserCourseModel.user_id == user_id,
-                UserCourseModel.active == True
+            stmt = select(EnrollmentModel).where(
+                EnrollmentModel.user_id == user_id,
+                EnrollmentModel.active == True
             )
             active_enrollments = session.execute(stmt).scalars().all()
 
@@ -134,7 +134,7 @@ async def process_exclusions():
                 if next_in_line:
                     # Create enrollment for the waiting user
                     from uuid import uuid4
-                    new_enrollment = UserCourseModel(
+                    new_enrollment = EnrollmentModel(
                         id=uuid4(),
                         created_at=DateTimeHandler.now(),
                         updated_at=None,

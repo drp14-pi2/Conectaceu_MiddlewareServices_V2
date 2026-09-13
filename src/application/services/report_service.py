@@ -7,13 +7,13 @@ from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.class_model import ClassModel
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.course_model import CourseModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.log_report_request_repository import LogReportRequestRepository
 from src.data.repositories.course_repository import CourseRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.user_repository import UserRepository
 
 class ReportService:
@@ -23,14 +23,14 @@ class ReportService:
         self,
         course_repo: CourseRepository,
         component_repo: CourseComponentRepository,
-        user_course_repo: UserCourseRepository,
+        enrollment_repo: EnrollmentRepository,
         user_repo: UserRepository,
         class_repo: ClassRepository,
         log_report_repo: LogReportRequestRepository
     ):
         self.course_repo = course_repo
         self.component_repo = component_repo
-        self.user_course_repo = user_course_repo
+        self.enrollment_repo = enrollment_repo
         self.user_repo = user_repo
         self.class_repo = class_repo
         self.log_report_repo = log_report_repo
@@ -66,7 +66,7 @@ class ReportService:
             
             for course in courses:
                 course_uuid: UUID = course.id
-                enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_uuid)
+                enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_course_id(course_uuid)
                 components: List[CourseComponentModel] = []
                 
                 # Get all components for this course
@@ -139,7 +139,7 @@ class ReportService:
             for course in courses:
                 course_uuid: UUID = course.id
                 # Count enrollments directly by course
-                enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_course_id(course_uuid)
+                enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_course_id(course_uuid)
                 total_enrolled: int = len(enrollments)
                 report_data.append({
                     'course_id': str(course_uuid),

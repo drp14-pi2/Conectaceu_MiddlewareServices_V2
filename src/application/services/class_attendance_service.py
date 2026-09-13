@@ -11,13 +11,13 @@ from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.repositories.class_attendance_repository import ClassAttendanceRepository
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.student_absence_justification_repository import StudentAbsenceJustificationRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.application.services.base_service import BaseService
 from src.domain.schemas.class_attendance import BulkAttendanceCreate, ClassAttendanceCreate
 from src.domain.schemas.document import DocumentCreate
@@ -31,7 +31,7 @@ class ClassAttendanceService(BaseService):
     def __init__(
         self, 
         repository: ClassAttendanceRepository,
-        user_course_repo: UserCourseRepository,
+        enrollment_repo: EnrollmentRepository,
         class_repo: ClassRepository,
         component_repo: CourseComponentRepository,
         document_repo: DocumentRepository,
@@ -39,7 +39,7 @@ class ClassAttendanceService(BaseService):
     ):
         super().__init__(repository, 'class_attendance', mapper_class=ClassAttendanceMapper)
         self.repository = repository
-        self.user_course_repo = user_course_repo
+        self.enrollment_repo = enrollment_repo
         self.class_repo = class_repo
         self.component_repo = component_repo
         self.document_repo = document_repo
@@ -69,7 +69,7 @@ class ClassAttendanceService(BaseService):
             user_id: UUID = UUID(entry.user_id)
             
             # Validate user is enrolled in the course
-            enrollment: UserCourseModel | None = await self.user_course_repo.get_by_user_and_course(user_id, course_id)
+            enrollment: EnrollmentModel | None = await self.enrollment_repo.get_by_user_and_course(user_id, course_id)
 
             if not enrollment or not enrollment.active:
                 continue  # Skip users not enrolled in this course
@@ -148,7 +148,7 @@ class ClassAttendanceService(BaseService):
             Dict with paginated class list
         """
         try:
-            enrollments: List[UserCourseModel] = await self.user_course_repo.get_active_by_user_id(user_id)
+            enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_user_id(user_id)
             all_classes: List[dict[str, Any]] = []
             
             for enrollment in enrollments:

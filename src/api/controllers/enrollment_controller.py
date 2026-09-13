@@ -4,15 +4,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
-from src.application.services.user_course_service import UserCourseService
+from src.application.services.enrollment_service import EnrollmentService
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
-from src.data.repositories.user_course_repository import UserCourseRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import User
-from src.domain.schemas.user_course import UserCourse, UserCourseBulkCreate, UserCourseCreate
+from src.domain.schemas.enrollment import Enrollment, EnrollmentBulkCreate, EnrollmentCreate
 
 router = APIRouter(
     prefix="/enrollment",
@@ -20,21 +20,21 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)]
 )
 
-def get_user_course_service(db: Session = Depends(get_db)) -> UserCourseService:
+def get_enrollment_service(db: Session = Depends(get_db)) -> EnrollmentService:
     """Dependency injection for UserCourseService"""
-    repository = UserCourseRepository(db)
+    repository = EnrollmentRepository(db)
     user_repo = UserRepository(db)
     course_repo = CourseRepository(db)
     waiting_list_repo = EnrollmentWaitingListRepository(db)
 
-    return UserCourseService(repository, user_repo, course_repo, waiting_list_repo)
+    return EnrollmentService(repository, user_repo, course_repo, waiting_list_repo)
 
-@router.post("/", response_model=UserCourse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Enrollment, status_code=status.HTTP_201_CREATED)
 async def enroll_user(
     request: Request,
-    dto: UserCourseCreate,
+    dto: EnrollmentCreate,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """Enroll a user in a class."""
     try:
@@ -50,9 +50,9 @@ async def enroll_user(
 
 @router.post("/bulk")
 async def bulk_enroll(
-    dto: UserCourseBulkCreate,
+    dto: EnrollmentBulkCreate,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """
     Bulk enroll users in a class.
@@ -63,11 +63,11 @@ async def bulk_enroll(
     
     return await service.bulk_enroll(dto)
 
-@router.get("/user/{user_id}", response_model=list[UserCourse])
+@router.get("/user/{user_id}", response_model=list[Enrollment])
 async def get_user_enrollments(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """
     Get all enrollments for a user.
@@ -83,7 +83,7 @@ async def get_user_enrollments(
 async def get_enrollment_summary(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """
     Get enrollment summary for a user.
@@ -95,11 +95,11 @@ async def get_enrollment_summary(
     
     return await service.get_enrollment_summary(user_id)
 
-@router.get("/course/{course_id}", response_model=List[UserCourse])
+@router.get("/course/{course_id}", response_model=List[Enrollment])
 async def get_course_enrollments(
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """
     Get all enrollments for a class.
@@ -115,7 +115,7 @@ async def unenroll_user(
     request: Request,
     enrollment_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: UserCourseService = Depends(get_user_course_service)
+    service: EnrollmentService = Depends(get_enrollment_service)
 ):
     """Unenroll a user from a class."""
     try:

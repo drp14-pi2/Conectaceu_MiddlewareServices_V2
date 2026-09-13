@@ -8,7 +8,7 @@ from src.application.mappers.document_mapper import DocumentMapper
 from src.data.models.class_model import ClassModel
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_validation_model import DocumentValidationModel
-from src.data.models.user_course_model import UserCourseModel
+from src.data.models.enrollment_model import EnrollmentModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
@@ -297,7 +297,7 @@ class DocumentService(BaseService):
 
     async def _generate_attendance_list_student_rows(
         self,
-        enrollments: list[UserCourseModel],
+        enrollments: list[EnrollmentModel],
         classes_count: int
     ) -> str:
         ATTENDANCE_CELL: str = '<td class="attendance_check"></td>'
@@ -354,12 +354,12 @@ class DocumentService(BaseService):
 
         from src.data.models.course_model import CourseModel
         from src.data.models.course_component_model import CourseComponentModel
-        from src.data.repositories.user_course_repository import UserCourseRepository
+        from src.data.repositories.enrollment_repository import EnrollmentRepository
         from src.data.repositories.course_repository import CourseRepository
         from src.data.repositories.course_component_repository import CourseComponentRepository
         from src.data.repositories.class_repository import ClassRepository
 
-        user_course_repo = UserCourseRepository(self.repository.session)
+        enrollment_repo = EnrollmentRepository(self.repository.session)
         course_repo = CourseRepository(self.repository.session)
         component_repo = CourseComponentRepository(self.repository.session)
         class_repo = ClassRepository(self.repository.session)
@@ -380,7 +380,7 @@ class DocumentService(BaseService):
         if not course:
             raise ValueError('Curso não encontrado')
         
-        enrollments: List[UserCourseModel] = await user_course_repo.get_active_by_course_id(course.id)
+        enrollments: List[EnrollmentModel] = await enrollment_repo.get_active_by_course_id(course.id)
 
         if len(enrollments) == 0:
             raise ValueError('Nenhuma matricula encontrada para o curso')

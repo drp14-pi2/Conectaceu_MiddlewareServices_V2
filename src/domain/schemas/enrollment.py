@@ -4,11 +4,11 @@ from uuid import UUID
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 
-class UserCourseCreate(BaseModel):
+class EnrollmentCreate(BaseModel):
     user_id: UUID
     course_id: UUID
 
-class UserCourse(BaseModel):
+class Enrollment(BaseModel):
     id: UUID
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -18,7 +18,7 @@ class UserCourse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-class UserCourseBulkCreate(BaseModel):
+class EnrollmentBulkCreate(BaseModel):
     course_id: UUID
     user_ids: List[UUID]
 
