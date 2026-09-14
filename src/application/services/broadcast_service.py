@@ -185,6 +185,7 @@ class BroadcastService:
             users: List[UserModel] = await self.user_repo.find_by_filters(
                 user_type_id=5, # Students only
                 active=True,
+                email_verified=True,
                 skip=page * page_size,
                 limit=page_size
             )
@@ -205,7 +206,7 @@ class BroadcastService:
             for user_id_str in user_ids:
                 user_id: UUID = UUID(user_id_str)
                 user: UserModel | None = await self.user_repo.get_by_id(user_id)
-                if user and user.active and user.id not in seen_ids:
+                if user and user.active and user.id not in seen_ids and user.email_verified:
                     seen_ids.add(user.id)
                     yield user
 
@@ -225,7 +226,7 @@ class BroadcastService:
                 # Stream active enrollments one at a time
                 async for enrollment in self._stream_enrollments(class_uuid):
                     user: UserModel = await self.user_repo.get_by_id(enrollment.user_id)
-                    if user and user.active and user.id not in seen_ids:
+                    if user and user.active and user.id not in seen_ids and user.email_verified:
                         seen_ids.add(user.id)
                         yield user
 

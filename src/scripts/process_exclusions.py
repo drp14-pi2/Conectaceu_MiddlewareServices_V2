@@ -10,6 +10,8 @@ from datetime import timedelta
 from uuid import UUID
 from typing import AsyncGenerator
 
+from src.data.models.email_validation_model import EmailValidationModel
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -38,6 +40,7 @@ from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
+from src.data.repositories.email_validation_repository import EmailValidationRepository
 
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.configuration.settings import settings
@@ -110,7 +113,7 @@ async def process_exclusions():
                     EnrollmentModel.user_id == user_id,
                     EnrollmentModel.active == True
                 )
-                active_enrollments = await session.execute(stmt).scalars().all()
+                active_enrollments = (await session.execute(stmt)).scalars().all()
 
                 enrolled_course_ids = []
                 for enrollment in active_enrollments:
@@ -129,7 +132,7 @@ async def process_exclusions():
                         .order_by(EnrollmentWaitingListModel.position)
                         .limit(1)
                     )
-                    next_in_line = await session.execute(stmt).scalar_one_or_none()
+                    next_in_line = (await session.execute(stmt)).scalar_one_or_none()
                     
                     if next_in_line:
                         # Create enrollment for the waiting user
@@ -151,7 +154,7 @@ async def process_exclusions():
 
                 # Anonymize addresses
                 stmt = select(AddressModel).where(AddressModel.user_id == user_id)
-                addresses = await session.execute(stmt).scalars().all()
+                addresses = (await session.execute(stmt)).scalars().all()
                 for addr in addresses:
                     addr.zip_code = ""
                     addr.street = ""
@@ -161,15 +164,21 @@ async def process_exclusions():
 
                 # Clear document contents
                 stmt = select(DocumentModel).where(DocumentModel.user_id == user_id)
-                documents = await session.execute(stmt).scalars().all()
+                documents = (await session.execute(stmt)).scalars().all()
                 for doc in documents:
                     doc.base64 = ""
+
+                # Delete e-mail validation
+                stmt = select(EmailValidationModel).where(EmailValidationModel.user_id == user_id)
+                email_validation = (await session.execute(stmt)).scalar_one_or_none()
+                if email_validation:
+                    await session.delete(email_validation)
 
                 # Anonymize legal representatives and their documents
                 stmt = select(LegalRepresentativeModel).where(
                     LegalRepresentativeModel.user_id == user_id
                 )
-                representatives = await session.execute(stmt).scalars().all()
+                representatives = (await session.execute(stmt)).scalars().all()
                 for rep in representatives:
                     rep.name = ""
                     rep.document = ""
@@ -177,7 +186,7 @@ async def process_exclusions():
                     stmt = select(DocumentModel).where(
                         DocumentModel.legal_representative_id == rep.id
                     )
-                    rep_docs = await session.execute(stmt).scalars().all()
+                    rep_docs = (await session.execute(stmt)).scalars().all()
                     for doc in rep_docs:
                         doc.base64 = ""
 

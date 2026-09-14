@@ -4,16 +4,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.application.services.email_validation_service import EmailValidationService
 from src.application.services.user_service import UserService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.models.user_model import UserModel
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
+from src.data.repositories.email_validation_repository import EmailValidationRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
 from src.domain.schemas.user_password_history import PasswordChange
+from src.infrastructure.messaging.email.email_service import EmailService
 
 router = APIRouter(
     prefix="/user",
@@ -32,6 +35,18 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
         user_repo,
         password_history_service,
         profiles_to_exclude_repo
+    )
+
+def get_email_validation_service(db: AsyncSession = Depends(get_db)) -> EmailValidationService:
+    """Dependecy injection for EmailValidationService"""
+    email_validation_repo = EmailValidationRepository(db)
+    user_repo = UserRepository(db)
+    email_service = EmailService()
+
+    return EmailValidationService(
+        email_validation_repo,
+        user_repo,
+        email_service
     )
 
 @router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
@@ -225,5 +240,32 @@ async def change_password(
         result: bool = await service.change_password(user_id, dto)
 
         return {"message": "Senha alterada com sucesso", "success": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/email/validation/request")
+async def request_email_validation(
+    current_user: User = Depends(get_current_active_user),
+    service: EmailValidationService = Depends(get_email_validation_service)
+):
+    """Request e-mail validation"""
+    try:
+        await service.request_email_validation(current_user.id)
+
+        return {"message": "Verificação de e-mail requerida com sucesso!"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/email/validation/{token}")
+async def activate_email(
+    token: str,
+    current_user: User = Depends(get_current_active_user),
+    service: EmailValidationService = Depends(get_email_validation_service)
+):
+    """Validates an e-mail given a token"""
+    try:
+        await service.validate_email(token, current_user.id)
+
+        return {"message": "E-mail validado com sucesso!"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -38,6 +38,7 @@ from src.data.models.report_type_model import ReportTypeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
+from src.data.repositories.email_validation_repository import EmailValidationRepository
 
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.configuration.settings import settings
@@ -118,7 +119,7 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
                                     DocumentModel.document_type_id == 7 # Absence justification doc type
                                 )
                             )
-                            document = await session.execute(stmt).scalar_one_or_none()
+                            document = (await session.execute(stmt)).scalar_one_or_none()
                             if document:
                                 stmt = select(DocumentValidationModel).where(
                                     and_(
@@ -126,7 +127,7 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
                                         DocumentValidationModel.document_validation_status_type_id == 2 # Approved document
                                     )
                                 )
-                                doc_validation = await session.execute(stmt).scalar_one_or_none()
+                                doc_validation = (await session.execute(stmt)).scalar_one_or_none()
                                 is_document_valid = doc_validation is not None
                         absence.justified = bool(justification and is_document_valid)
                     

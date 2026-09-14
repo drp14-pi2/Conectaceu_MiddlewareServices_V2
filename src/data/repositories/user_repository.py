@@ -45,6 +45,7 @@ class UserRepository(BaseRepository[UserModel]):
         sex_id: Optional[int] = None,
         gender_id: Optional[int] = None,
         active: Optional[bool] = None,
+        email_verified: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[UserModel]:
@@ -67,6 +68,8 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.gender_id == gender_id)
         if active is not None:
             conditions.append(UserModel.active == active)
+        if email_verified is not None:
+            conditions.append(UserModel.email_verified == email_verified)
         
         stmt = select(UserModel)
         if conditions:

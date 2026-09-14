@@ -140,9 +140,9 @@ class EmailService:
         </html>
         """
         
-        return await self._send_email(to_email, subject, html_content)
+        return await self.send_email(to_email, subject, html_content)
     
-    async def _send_email(
+    async def send_email(
         self,
         to_email: str,
         subject: str,

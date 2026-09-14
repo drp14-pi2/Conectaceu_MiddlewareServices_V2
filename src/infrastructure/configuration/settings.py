@@ -28,6 +28,7 @@ class AppSettings(BaseSettings):
     # App configuration
     APP_NAME: str = Field(default="ConectaCEU")
     APP_VERSION: str = Field(default="0.1.0")
+    APP_API_URL: str = Field(default="")
     APP_FRONTEND_URL: str = Field(default="")
     ENVIRONMENT: str = Field(default="Development")
     
@@ -76,6 +77,10 @@ class AppSettings(BaseSettings):
     
     # Enrollment
     ENROLLMENT_MONTHS: list[int] = Field(default=[])
+
+    # E-mail validation
+    VALIDATE_EMAIL_VALIDATION_TOKEN_ENDPOINT: str = Field(default="")
+    EMAIL_VALIDATION_TOKEN_EXPIRATION_HOURS: int = Field(default=1, ge=1)
     
     model_config = ConfigDict(
         env_file=".env",
