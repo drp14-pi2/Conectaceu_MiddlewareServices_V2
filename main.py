@@ -27,6 +27,7 @@ from src.api.controllers.component_controller import router as component_router
 from src.api.controllers.class_controller import router as class_router
 from src.api.controllers.attendance_controller import router as attendance_router
 from src.api.controllers.enrollment_controller import router as enrollment_router
+from src.api.controllers.educational_unit_controller import router as educational_unit_router
 from src.api.controllers.document_controller import router as document_router
 from src.api.controllers.representative_controller import router as representative_router
 from src.api.controllers.password_reset_controller import router as password_router
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(component_router, prefix="/api")
     app.include_router(course_router, prefix="/api")
     app.include_router(document_router, prefix="/api")
+    app.include_router(educational_unit_router, prefix="/api")
     app.include_router(enrollment_router, prefix="/api")
     app.include_router(health_router, prefix="/api")
     app.include_router(password_router, prefix="/api")

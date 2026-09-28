@@ -25,6 +25,7 @@ class CourseRepository(BaseRepository[CourseModel]):
         active: Optional[bool] = None,
         educator_id: Optional[UUID] = None,
         shift_type_id: Optional[int] = None,
+        educational_unit_id: Optional[UUID] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[CourseModel]:
@@ -43,6 +44,8 @@ class CourseRepository(BaseRepository[CourseModel]):
             )
         if shift_type_id is not None:
             conditions.append(CourseModel.shift_type_id == shift_type_id)
+        if educational_unit_id is not None:
+            conditions.append(CourseModel.educational_unit_id == educational_unit_id)
         
         stmt = select(CourseModel)
         if conditions:

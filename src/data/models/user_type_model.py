@@ -15,3 +15,4 @@ class UserTypeModel(IntPkBaseModel):
     add_courses = Column(Boolean, nullable=False, default=False)
     add_classes = Column(Boolean, nullable=False, default=False)
     emit_user_documents = Column(Boolean, nullable=False, default=False)
+    register_educational_unit = Column(Boolean, nullable=False, default=False)

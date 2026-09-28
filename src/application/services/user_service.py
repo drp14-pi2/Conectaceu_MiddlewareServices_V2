@@ -8,8 +8,10 @@ from src.application.logging.application_logger import ApplicationLogger
 from src.application.mappers.user_mapper import UserMapper
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
+from src.data.models.educational_unit_model import EducationalUnitModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
 from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
@@ -25,12 +27,14 @@ class UserService(BaseService):
         self,
         repository: UserRepository,
         password_history_service: UserPasswordHistoryService,
-        profiles_to_exclude_repo: ProfilesToExcludeRepository
+        profiles_to_exclude_repo: ProfilesToExcludeRepository,
+        educational_unit_repo: EducationalUnitRepository
     ):
         super().__init__(repository, 'user', mapper_class=UserMapper)
         self.repository = repository
         self.password_history_service = password_history_service
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
+        self.educational_unit_repo = educational_unit_repo
     
     async def create_user(
         self, 
@@ -109,6 +113,11 @@ class UserService(BaseService):
                 model.active = True
             else:
                 model.active = False
+
+            educational_unit: EducationalUnitModel | None = await self.educational_unit_repo.get_by_id(dto.educational_unit_id)
+
+            if not educational_unit:
+                raise ValueError('Polo não encontrado')
             
             # Save user
             saved_model: UserModel = await self.repository.create(model)
@@ -276,8 +285,9 @@ class UserService(BaseService):
         phoneNumber: Optional[str] = None,
         user_type_id: Optional[int] = None,
         active: Optional[bool] = None,
+        educational_unit_id: Optional[UUID] = None,
         page: int = 1,
-        page_size: int = 10
+        page_size: int = 10,
     ) -> List[User]:
         """Find users with filters and pagination"""
         try:
@@ -289,6 +299,7 @@ class UserService(BaseService):
                 phoneNumber=phoneNumber,
                 user_type_id=user_type_id,
                 active=active,
+                educational_unit_id=educational_unit_id,
                 skip=skip,
                 limit=page_size
             )

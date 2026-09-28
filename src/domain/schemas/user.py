@@ -29,6 +29,7 @@ class UserCreate(UserBase):
     user_type_id: int
     password: str = Field(min_length=8, max_length=128)
     address: AddressCreate
+    educational_unit_id: UUID
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=3, max_length=200)
@@ -46,6 +47,7 @@ class User(UserBase):
     user_type_id: int
     active: bool
     email_verified: Optional[bool] = False
+    educational_unit_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,6 +73,7 @@ class UserList(BaseModel):
     user_type_id: int
     active: bool
     created_at: datetime
+    educational_unit_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

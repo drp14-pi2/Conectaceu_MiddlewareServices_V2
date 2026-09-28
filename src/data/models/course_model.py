@@ -17,3 +17,4 @@ class CourseModel(UuidPkUpdatableBaseModel):
     responsible_educator_1 = Column(UUIDBinary, ForeignKey('user.id'), nullable=False)
     responsible_educator_2 = Column(UUIDBinary, ForeignKey('user.id'), nullable=True)
     shift_type_id = Column(Integer, ForeignKey('shift_type.id'), nullable=False)
+    educational_unit_id = Column(UUIDBinary, ForeignKey('educational_unit.id'), nullable=False)

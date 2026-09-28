@@ -71,11 +71,12 @@ def upgrade() -> None:
             sa.column('emit_user_documents', sa.Boolean)
         ),
         [
-            {'id': 1, 'description': 'Administrador', 'register_user': 1, 'validate_user_documents': 1, 'list_secretaries': 1, 'list_educators': 1, 'list_students': 1, 'send_broadcast_message': 1, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 0},
-            {'id': 2, 'description': 'Secretário', 'register_user': 1, 'validate_user_documents': 1, 'list_secretaries': 1, 'list_educators': 1, 'list_students': 1, 'send_broadcast_message': 1, 'add_courses': 0, 'add_classes': 0, 'emit_user_documents': 1},
-            {'id': 3, 'description': 'Coordenador', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 1, 'send_broadcast_message': 0, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 1},
-            {'id': 4, 'description': 'Educador', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 1, 'send_broadcast_message': 0, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 0},
-            {'id': 5, 'description': 'Estudante', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 0, 'send_broadcast_message': 0, 'add_courses': 0, 'add_classes': 0, 'emit_user_documents': 1},
+            {'id': 1, 'description': 'Administrador', 'register_user': 1, 'validate_user_documents': 1, 'list_secretaries': 1, 'list_educators': 1, 'list_students': 1, 'send_broadcast_message': 1, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 0, 'register_educational_unit': 1},
+            {'id': 2, 'description': 'Secretário', 'register_user': 1, 'validate_user_documents': 1, 'list_secretaries': 1, 'list_educators': 1, 'list_students': 1, 'send_broadcast_message': 1, 'add_courses': 0, 'add_classes': 0, 'emit_user_documents': 1, 'register_educational_unit': 0},
+            {'id': 3, 'description': 'Coordenador', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 1, 'send_broadcast_message': 0, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 1, 'register_educational_unit': 0},
+            {'id': 4, 'description': 'Educador', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 1, 'send_broadcast_message': 0, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 0, 'register_educational_unit': 0},
+            {'id': 5, 'description': 'Estudante', 'register_user': 0, 'validate_user_documents': 0, 'list_secretaries': 0, 'list_educators': 0, 'list_students': 0, 'send_broadcast_message': 0, 'add_courses': 0, 'add_classes': 0, 'emit_user_documents': 1, 'register_educational_unit': 0},
+            {'id': 6, 'description': 'Gestor', 'register_user': 1, 'validate_user_documents': 1, 'list_secretaries': 1, 'list_educators': 1, 'list_students': 1, 'send_broadcast_message': 1, 'add_courses': 1, 'add_classes': 1, 'emit_user_documents': 0, 'register_educational_unit': 0}
         ]
     )
 

@@ -1,6 +1,7 @@
 """User model"""
 from sqlalchemy import Column, String, DateTime, Integer, Boolean, ForeignKey
 from src.data.db_context.base import UuidPkUpdatableBaseModel
+from src.data.db_context.types import UUIDBinary
 
 class UserModel(UuidPkUpdatableBaseModel):
     __tablename__ = "user"
@@ -23,3 +24,4 @@ class UserModel(UuidPkUpdatableBaseModel):
     sex_id = Column(Integer, ForeignKey('user_sex_type.id'), nullable=False)
     gender_id = Column(Integer, ForeignKey('user_gender_type.id'), nullable=False)
     user_type_id = Column(Integer, ForeignKey('user_type.id'), nullable=False)
+    educational_unit_id = Column(UUIDBinary, ForeignKey('educational_unit.id'), nullable=True)

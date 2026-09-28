@@ -12,6 +12,7 @@ from src.data.repositories.profiles_to_exclude_repository import ProfilesToExclu
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.email_validation_repository import EmailValidationRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
@@ -31,11 +32,13 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     password_history_repo = UserPasswordHistoryRepository(db)
     password_history_service = UserPasswordHistoryService(password_history_repo)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+    educational_unit_repo = EducationalUnitRepository(db)
 
     return UserService(
         user_repo,
         password_history_service,
-        profiles_to_exclude_repo
+        profiles_to_exclude_repo,
+        educational_unit_repo
     )
 
 def get_email_validation_service(db: AsyncSession = Depends(get_db)) -> EmailValidationService:
@@ -145,6 +148,7 @@ async def list_users(
     phoneNumber: Optional[str] = Query(None),
     user_type_id: Optional[int] = Query(None),
     active: Optional[bool] = Query(None),
+    educational_unit_id: Optional[UUID] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_active_user),
@@ -164,6 +168,7 @@ async def list_users(
             phoneNumber=phoneNumber,
             user_type_id=user_type_id,
             active=active,
+            educational_unit_id=educational_unit_id,
             page=page,
             page_size=page_size
         )

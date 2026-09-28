@@ -26,6 +26,7 @@ from src.data.repositories.shift_type_repository import ShiftTypeRepository
 from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.email_validation_repository import EmailValidationRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 
 # Log repositories
 from src.data.repositories.log_access_repository import LogAccessRepository
@@ -73,6 +74,7 @@ class DatabaseContext:
         self.student_absence_justification = StudentAbsenceJustificationRepository(self.session)
         self.enrollment_waiting_list = EnrollmentWaitingListRepository(self.session)
         self.email_validation_repository = EmailValidationRepository(self.session)
+        self.educational_unit_repository = EducationalUnitRepository(self.session)
         
         # Log repositories
         self.log_accesses = LogAccessRepository(self.session)

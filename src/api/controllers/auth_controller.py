@@ -11,6 +11,7 @@ from src.data.repositories.log_access_repository import LogAccessRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
 from src.data.repositories.user_repository import UserRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.middleware.rate_limiter import limiter
@@ -34,11 +35,13 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     password_history_repo = UserPasswordHistoryRepository(db)
     password_history_service = UserPasswordHistoryService(password_history_repo)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
+    educational_unit_repo = EducationalUnitRepository(db)
 
     return UserService(
         user_repo,
         password_history_service,
-        profiles_to_exclude_repo
+        profiles_to_exclude_repo,
+        educational_unit_repo
     )
 
 @router.post("/login")

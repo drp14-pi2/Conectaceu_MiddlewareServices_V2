@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.application.services.course_service import CourseService
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.course import Course, CourseCreate
@@ -22,8 +23,9 @@ def get_course_service(db: AsyncSession = Depends(get_db)) -> CourseService:
     """Dependency injection for CourseService"""
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)
+    educational_unit_repo = EducationalUnitRepository(db)
 
-    return CourseService(course_repo, component_repo)
+    return CourseService(course_repo, component_repo, educational_unit_repo)
 
 @router.post("/", response_model=Course, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
@@ -94,6 +96,7 @@ async def list_courses(
     active: bool = Query(None),
     educator_id: UUID = Query(None),
     shift_type_id: int = Query(None),
+    educational_unit_id: UUID = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     service: CourseService = Depends(get_course_service)
@@ -104,6 +107,7 @@ async def list_courses(
         active=active,
         educator_id=str(educator_id) if educator_id else None,
         shift_type_id=shift_type_id,
+        educational_unit_id=educational_unit_id,
         page=page,
         page_size=page_size
     )

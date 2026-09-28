@@ -45,6 +45,7 @@ class UserRepository(BaseRepository[UserModel]):
         sex_id: Optional[int] = None,
         gender_id: Optional[int] = None,
         active: Optional[bool] = None,
+        educational_unit_id: Optional[UUID] = None,
         email_verified: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
@@ -68,6 +69,8 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.gender_id == gender_id)
         if active is not None:
             conditions.append(UserModel.active == active)
+        if educational_unit_id is not None:
+            conditions.append(UserModel.educational_unit_id == educational_unit_id)
         if email_verified is not None:
             conditions.append(UserModel.email_verified == email_verified)
         

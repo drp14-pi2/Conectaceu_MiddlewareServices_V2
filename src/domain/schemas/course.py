@@ -16,6 +16,7 @@ class CourseBase(BaseModel):
 class CourseCreate(CourseBase):
     responsible_educator_1: UUID
     responsible_educator_2: Optional[UUID] = None
+    educational_unit_id: UUID
 
 class Course(CourseBase):
     id: UUID
@@ -24,6 +25,7 @@ class Course(CourseBase):
     responsible_educator_1: UUID
     responsible_educator_2: Optional[UUID] = None
     active: bool
+    educational_unit_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -44,5 +46,6 @@ class CourseList(BaseModel):
     shift_type_id: int
     total_seat_limit: int
     components: List[CourseComponent]
+    educational_unit_id: UUID
 
     model_config = ConfigDict(from_attributes=True)

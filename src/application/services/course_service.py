@@ -5,8 +5,10 @@ from uuid import UUID
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.course_model import CourseModel
+from src.data.models.educational_unit_model import EducationalUnitModel
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.course_mapper import CourseMapper
 from src.domain.schemas.course import Course, CourseCreate, CourseList, CourseUpdate
@@ -17,11 +19,13 @@ class CourseService(BaseService):
     def __init__(
         self, 
         repository: CourseRepository,
-        component_repo: CourseComponentRepository
+        component_repo: CourseComponentRepository,
+        educational_unit_repo: EducationalUnitRepository
     ):
         super().__init__(repository, 'course', mapper_class=CourseMapper)
         self.repository = repository
         self.component_repo = component_repo
+        self.educational_unit_repo = educational_unit_repo
     
     async def create_course(
         self, 
@@ -52,6 +56,11 @@ class CourseService(BaseService):
 
             if dto.max_student_age > MAX_STUDENT_AGE_ALLOWED:
                 raise ValueError(f"Idade máxima inválida. Limite: {MAX_STUDENT_AGE_ALLOWED}")
+
+            educational_unit: EducationalUnitModel | None = await self.educational_unit_repo.get_by_id(dto.educational_unit_id)
+
+            if not educational_unit:
+                raise ValueError('Polo não encontrado')
             
             model: CourseModel = CourseMapper.create_to_model(dto)
             saved_model: CourseModel = await self.repository.create(model)
@@ -156,6 +165,7 @@ class CourseService(BaseService):
         name: Optional[str] = None,
         active: Optional[bool] = None,
         educator_id: Optional[UUID] = None,
+        educational_unit_id: Optional[UUID] = None,
         page: int = 1,
         page_size: int = 10
     ) -> List[Course]:
@@ -166,6 +176,7 @@ class CourseService(BaseService):
                 name=name,
                 active=active,
                 educator_id=educator_id,
+                educational_unit_id=educational_unit_id,
                 skip=skip,
                 limit=page_size
             )

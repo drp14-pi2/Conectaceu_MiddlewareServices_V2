@@ -38,6 +38,7 @@ from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.models.email_validation_model import EmailValidationModel
+from src.data.models.educational_unit_model import EducationalUnitModel
 
 # Log models
 from src.data.models.log_access_model import LogAccessModel
