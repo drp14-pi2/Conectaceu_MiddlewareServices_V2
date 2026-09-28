@@ -1,7 +1,7 @@
 """Class controller"""
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.class_service import ClassService
@@ -13,6 +13,7 @@ from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.class_ import Class, ClassBulkCreate, ClassFilter
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/class",
@@ -30,7 +31,9 @@ def get_class_service(db: AsyncSession = Depends(get_db)) -> ClassService:
     return ClassService(class_repo, component_repo, enrollment_repo, course_repo)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def bulk_create_classes(
+    request: Request,
     dto: ClassBulkCreate,
     current_user: User = Depends(get_current_active_user),
     service: ClassService = Depends(get_class_service)
@@ -45,7 +48,9 @@ async def bulk_create_classes(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{class_id}/deactivate")
+@limiter.limit("5/minute")
 async def deactivate_class(
+    request: Request,
     class_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: ClassService = Depends(get_class_service)
@@ -61,7 +66,9 @@ async def deactivate_class(
 
 
 @router.patch("/{class_id}/activate")
+@limiter.limit("5/minute")
 async def activate_class(
+    request: Request,
     class_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: ClassService = Depends(get_class_service)
@@ -79,7 +86,9 @@ async def activate_class(
 
 
 @router.get("/", response_model=List[Class])
+@limiter.limit("20/minute")
 async def list_classes(
+    request: Request,
     component_id: UUID = Query(None),
     active: bool = Query(None),
     page: int = Query(1, ge=1),
@@ -98,7 +107,9 @@ async def list_classes(
 
 
 @router.get("/{class_id}", response_model=Class)
+@limiter.limit("20/minute")
 async def get_class(
+    request: Request,
     class_id: UUID,
     service: ClassService = Depends(get_class_service)
 ):

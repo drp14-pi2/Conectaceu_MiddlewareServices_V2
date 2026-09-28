@@ -16,6 +16,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.domain.schemas.document import Document, DocumentCreate
 from src.domain.schemas.document_validation import DocumentValidation, DocumentValidationInput
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/document",
@@ -39,7 +40,9 @@ def get_validation_service(db: AsyncSession = Depends(get_db)) -> DocumentValida
     return DocumentValidationService(repository, representative_repo)
 
 @router.post("/", response_model=Document, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def upload_document(
+    request: Request,
     dto: DocumentCreate,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
@@ -55,7 +58,9 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/user/{user_id}", response_model=List[Document])
+@limiter.limit("20/minute")
 async def get_user_documents(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
@@ -71,6 +76,7 @@ async def get_user_documents(
     return await service.get_user_documents(user_id)
 
 @router.get("/{document_id}", response_model=Document)
+@limiter.limit("20/minute")
 async def get_document(
     request: Request,
     document_id: UUID,
@@ -90,6 +96,7 @@ async def get_document(
     return document
 
 @router.get("/user/{user_id}/type/{document_type_id}", response_model=List[Document])
+@limiter.limit("20/minute")
 async def get_document_by_type(
     request: Request,
     user_id: UUID,
@@ -110,7 +117,9 @@ async def get_document_by_type(
     return documents
 
 @router.get("/management/type/{document_type_id}", response_model=dict)
+@limiter.limit("20/minute")
 async def get_management_document_template(
+    request: Request,
     document_type_id: int,
     component_id: Optional[UUID] = None,
     month: Optional[int] = None,
@@ -130,6 +139,7 @@ async def get_management_document_template(
 
 # Document validation
 @router.put("/validate", response_model=DocumentValidation)
+@limiter.limit("5/minute")
 async def validate_document(
     request: Request,
     dto: DocumentValidationInput,
@@ -155,7 +165,9 @@ async def validate_document(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/validate/pending", response_model=list[DocumentValidation])
+@limiter.limit("20/minute")
 async def get_pending_validations(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_active_user),

@@ -13,6 +13,7 @@ from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import User
 from src.domain.schemas.enrollment import Enrollment, EnrollmentBulkCreate, EnrollmentCreate
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/enrollment",
@@ -30,6 +31,7 @@ def get_enrollment_service(db: AsyncSession = Depends(get_db)) -> EnrollmentServ
     return EnrollmentService(repository, user_repo, course_repo, waiting_list_repo)
 
 @router.post("/", response_model=Enrollment, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def enroll_user(
     request: Request,
     dto: EnrollmentCreate,
@@ -49,7 +51,9 @@ async def enroll_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/bulk")
+@limiter.limit("5/minute")
 async def bulk_enroll(
+    request: Request,
     dto: EnrollmentBulkCreate,
     current_user: User = Depends(get_current_active_user),
     service: EnrollmentService = Depends(get_enrollment_service)
@@ -64,7 +68,9 @@ async def bulk_enroll(
     return await service.bulk_enroll(dto)
 
 @router.get("/user/{user_id}", response_model=list[Enrollment])
+@limiter.limit("20/minute")
 async def get_user_enrollments(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: EnrollmentService = Depends(get_enrollment_service)
@@ -80,7 +86,9 @@ async def get_user_enrollments(
     return await service.get_user_enrollments(user_id)
 
 @router.get("/user/{user_id}/summary")
+@limiter.limit("20/minute")
 async def get_enrollment_summary(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: EnrollmentService = Depends(get_enrollment_service)
@@ -96,7 +104,9 @@ async def get_enrollment_summary(
     return await service.get_enrollment_summary(user_id)
 
 @router.get("/course/{course_id}", response_model=List[Enrollment])
+@limiter.limit("20/minute")
 async def get_course_enrollments(
+    request: Request,
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: EnrollmentService = Depends(get_enrollment_service)
@@ -111,6 +121,7 @@ async def get_course_enrollments(
     return await service.get_active_course_enrollments(course_id)
 
 @router.patch("/{enrollment_id}/unenroll")
+@limiter.limit("5/minute")
 async def unenroll_user(
     request: Request,
     enrollment_id: UUID,

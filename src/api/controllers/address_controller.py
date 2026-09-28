@@ -1,7 +1,7 @@
 """Address controller"""
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.address_service import AddressService
@@ -10,6 +10,7 @@ from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.address import Address, AddressUpdate
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/address",
@@ -24,7 +25,9 @@ def get_address_service(db: AsyncSession = Depends(get_db)) -> AddressService:
     return AddressService(repository)
 
 @router.get("/user/{user_id}", response_model=List[Address])
+@limiter.limit("20/minute")
 async def get_user_addresses(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: AddressService = Depends(get_address_service)
@@ -42,7 +45,9 @@ async def get_user_addresses(
     raise HTTPException(status_code=403, detail="Can only view your own addresses")
 
 @router.put("/{address_id}", response_model=Address)
+@limiter.limit("10/minute")
 async def update_address(
+    request: Request,
     address_id: UUID,
     dto: AddressUpdate,
     current_user: User = Depends(get_current_active_user),

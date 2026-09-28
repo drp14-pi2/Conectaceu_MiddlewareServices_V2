@@ -25,6 +25,7 @@ email-validator = "^2.3.0"
 requests = "^2.31.0"
 weasyprint = "^68.1"
 aiomysql = "^0.3.2"
+slowapi = "^0.1.10"
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.3.1"

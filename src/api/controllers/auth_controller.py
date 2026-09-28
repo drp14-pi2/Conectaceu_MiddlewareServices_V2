@@ -13,6 +13,7 @@ from src.data.repositories.user_password_history_repository import UserPasswordH
 from src.data.repositories.user_repository import UserRepository
 from src.data.db_context.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.api.middleware.rate_limiter import limiter
 
 from src.domain.schemas.auth import Login
 from src.domain.schemas.user import User, UserCreate
@@ -41,6 +42,7 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     )
 
 @router.post("/login")
+@limiter.limit("5/minute")
 async def login(
     request: Request,
     body: Login,
@@ -63,7 +65,9 @@ async def login(
     return result
 
 @router.post("/refresh")
+@limiter.limit("5/minute")
 async def refresh_token(
+    request: Request,
     refresh_token: str,
     service: AuthService = Depends(get_auth_service)
 ):
@@ -79,12 +83,14 @@ async def refresh_token(
     return result
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def public_register(
+    request: Request,
     dto: UserCreate,
     service: UserService = Depends(get_user_service)
 ):
     """
-    Public registration. User is created inactive.
+    Public registration.
     Documents need validation by a Secretary.
     """
     try:

@@ -10,6 +10,7 @@ from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.course import Course, CourseCreate
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/course",
@@ -25,6 +26,7 @@ def get_course_service(db: AsyncSession = Depends(get_db)) -> CourseService:
     return CourseService(course_repo, component_repo)
 
 @router.post("/", response_model=Course, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def create_course(
     request: Request,
     dto: CourseCreate,
@@ -47,7 +49,9 @@ async def create_course(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{course_id}/deactivate")
+@limiter.limit("5/minute")
 async def deactivate_course(
+    request: Request,
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: CourseService = Depends(get_course_service)
@@ -64,7 +68,9 @@ async def deactivate_course(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{course_id}/activate")
+@limiter.limit("5/minute")
 async def activate_course(
+    request: Request,
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: CourseService = Depends(get_course_service)
@@ -81,7 +87,9 @@ async def activate_course(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=list[Course])
+@limiter.limit("20/minute")
 async def list_courses(
+    request: Request,
     name: str = Query(None),
     active: bool = Query(None),
     educator_id: UUID = Query(None),
@@ -101,7 +109,9 @@ async def list_courses(
     )
 
 @router.get("/{course_id}", response_model=Course)
+@limiter.limit("20/minute")
 async def get_course(
+    request: Request,
     course_id: UUID,
     service: CourseService = Depends(get_course_service)
 ):
@@ -114,7 +124,9 @@ async def get_course(
     return course
 
 @router.get("/{course_id}/components", response_model=Course)
+@limiter.limit("20/minute")
 async def get_course_with_components(
+    request: Request,
     course_id: UUID,
     service: CourseService = Depends(get_course_service)
 ):

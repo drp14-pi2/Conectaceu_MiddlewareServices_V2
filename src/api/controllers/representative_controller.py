@@ -1,7 +1,7 @@
 """Legal representative controller"""
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.legal_representative_service import LegalRepresentativeService
@@ -13,6 +13,7 @@ from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.data.repositories.user_repository import UserRepository
 from src.domain.schemas.legal_representative import LegalRepresentative, LegalRepresentativeCreate, LegalRepresentativeUpdate
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/representative",
@@ -30,7 +31,9 @@ def get_representative_service(db: AsyncSession = Depends(get_db)) -> LegalRepre
     return LegalRepresentativeService(repository, document_repo, document_validation_repo, user_repo)
 
 @router.post("/", response_model=LegalRepresentative, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def create_representative(
+    request: Request,
     dto: LegalRepresentativeCreate,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
@@ -45,7 +48,9 @@ async def create_representative(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.put("/{representative_id}", response_model=LegalRepresentative)
+@limiter.limit("5/minute")
 async def update_representative(
+    request: Request,
     representative_id: UUID,
     dto: LegalRepresentativeUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -66,7 +71,9 @@ async def update_representative(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{representative_id}")
+@limiter.limit("5/minute")
 async def delete_representative(
+    request: Request,
     representative_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
@@ -83,7 +90,9 @@ async def delete_representative(
     return {"message": "Representante excluído com sucesso"}
 
 @router.get("/user/{user_id}", response_model=List[LegalRepresentative])
+@limiter.limit("20/minute")
 async def get_user_representatives(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
@@ -99,7 +108,9 @@ async def get_user_representatives(
     return await service.get_user_representatives(user_id)
 
 @router.get("/{representative_id}", response_model=LegalRepresentative)
+@limiter.limit("20/minute")
 async def get_representative(
+    request: Request,
     representative_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)

@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.class_attendance_service import ClassAttendanceService
@@ -17,6 +17,7 @@ from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.class_attendance import BulkAttendanceCreate
 from src.domain.schemas.document import DocumentCreate
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/attendance",
@@ -42,7 +43,9 @@ def get_attendance_service(db: AsyncSession = Depends(get_db)) -> ClassAttendanc
     )
 
 @router.post("/class/take")
+@limiter.limit("10/minute")
 async def take_attendance(
+    request: Request,
     dto: BulkAttendanceCreate,
     current_user: User = Depends(get_current_active_user),
     service: ClassAttendanceService = Depends(get_attendance_service)
@@ -57,12 +60,14 @@ async def take_attendance(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/class/{class_id}")
+@limiter.limit("20/minute")
 async def get_class_attendance(
+    request: Request,
     class_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: ClassAttendanceService = Depends(get_attendance_service)
 ):
-    """Take attendance for a class. Educators (4) and Coordinators (3) only."""
+    """List attendances for a class. Educators (4) and Coordinators (3) only."""
     if current_user.user_type_id not in [3, 4]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -70,7 +75,9 @@ async def get_class_attendance(
     return await service.get_class_attendance(class_id)
 
 @router.get("/user/{user_id}/class/{class_id}")
+@limiter.limit("20/minute")
 async def get_user_class_attendance(
+    request: Request,
     user_id: UUID,
     class_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -84,7 +91,9 @@ async def get_user_class_attendance(
 
 
 @router.get("/user/{user_id}/classes")
+@limiter.limit("20/minute")
 async def get_user_classes(
+    request: Request,
     user_id: UUID,
     date: Optional[date] = Query(None),
     attended: Optional[bool] = Query(None),
@@ -106,7 +115,9 @@ async def get_user_classes(
     )
 
 @router.post("/{attendance_id}/justify")
+@limiter.limit("10/minute")
 async def submit_absence_justification(
+    request: Request,
     attendance_id: UUID,
     document: DocumentCreate,
     current_user: User = Depends(get_current_active_user),

@@ -16,6 +16,7 @@ from src.infrastructure.messaging.email.email_service import EmailService
 from src.infrastructure.messaging.sms.sms_service import SmsService
 from src.infrastructure.messaging.whatsapp.whatsapp_service import WhatsAppService
 from src.data.db_context.database import get_db
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/broadcast",
@@ -47,6 +48,7 @@ def get_broadcast_service(db: AsyncSession = Depends(get_db)) -> BroadcastServic
 
 
 @router.post("/", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 async def send_broadcast(
     request: Request,
     dto: BroadcastMessageCreate,

@@ -1,5 +1,5 @@
 """Reference data controller for lookup tables"""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.mappers.reference_mapper import ReferenceMapper
@@ -13,6 +13,7 @@ from src.data.repositories.shift_type_repository import ShiftTypeRepository
 from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/reference",
@@ -22,7 +23,11 @@ router = APIRouter(
 
 # Sex Types
 @router.get("/sex-types")
-async def get_sex_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_sex_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all sex types"""
     repo = UserSexTypeRepository(db)
     models = await repo.get_all()
@@ -33,7 +38,11 @@ async def get_sex_types(db: AsyncSession = Depends(get_db)):
 
 # Gender Types
 @router.get("/gender-types")
-async def get_gender_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_gender_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all gender types"""
     repo = UserGenderTypeRepository(db)
     models = await repo.get_all()
@@ -44,7 +53,11 @@ async def get_gender_types(db: AsyncSession = Depends(get_db)):
 
 # User Types
 @router.get("/user-types")
-async def get_user_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_user_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all user types"""
     repo = UserTypeRepository(db)
     models = await repo.get_all()
@@ -55,7 +68,11 @@ async def get_user_types(db: AsyncSession = Depends(get_db)):
 
 # Legal Representative Degrees
 @router.get("/legal-representative-degrees")
-async def get_legal_representative_degrees(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_legal_representative_degrees(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all legal representative degrees"""
     repo = LegalRepresentativeDegreeRepository(db)
     models = await repo.get_all()
@@ -66,7 +83,11 @@ async def get_legal_representative_degrees(db: AsyncSession = Depends(get_db)):
 
 # Document Types
 @router.get("/document-types")
-async def get_document_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_document_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all document types"""
     repo = DocumentTypeRepository(db)
     models = await repo.get_all()
@@ -77,7 +98,11 @@ async def get_document_types(db: AsyncSession = Depends(get_db)):
 
 # Validation Status Types
 @router.get("/validation-status-types")
-async def get_validation_status_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_validation_status_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all validation status types"""
     repo = DocumentValidationStatusTypeRepository(db)
     models = await repo.get_all()
@@ -88,7 +113,11 @@ async def get_validation_status_types(db: AsyncSession = Depends(get_db)):
 
 # Shift Types
 @router.get("/shift-types")
-async def get_shift_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_shift_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all shift types"""
     repo = ShiftTypeRepository(db)
     models = await repo.get_all()
@@ -99,7 +128,11 @@ async def get_shift_types(db: AsyncSession = Depends(get_db)):
 
 # Report Types
 @router.get("/report-types")
-async def get_report_types(db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_report_types(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
     """Get all report types"""
     repo = ReportTypeRepository(db)
     models = await repo.get_all()

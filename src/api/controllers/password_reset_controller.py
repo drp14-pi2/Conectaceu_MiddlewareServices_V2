@@ -1,7 +1,7 @@
 """Password reset controller"""
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.password_reset_service import PasswordResetService
@@ -12,6 +12,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.domain.schemas.password_reset import PasswordResetRequest
 from src.domain.schemas.password_reset import PasswordResetRequest, PasswordResetSubmit
 from src.infrastructure.messaging.email.email_service import EmailService
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(prefix="/password", tags=["Password Reset"])
 
@@ -24,7 +25,9 @@ def get_password_reset_service(db: AsyncSession = Depends(get_db)) -> PasswordRe
     return PasswordResetService(user_repo, password_history_service, email_service)
 
 @router.post("/reset/request")
+@limiter.limit("5/minute")
 async def request_password_reset(
+    request: Request,
     body: PasswordResetRequest,
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
@@ -32,7 +35,9 @@ async def request_password_reset(
     return await service.request_password_reset(body)
 
 @router.get("/reset/validate")
+@limiter.limit("5/minute")
 async def validate_reset_token(
+    request: Request,
     token: str,
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
@@ -45,15 +50,17 @@ async def validate_reset_token(
     return result
 
 @router.post("/reset")
+@limiter.limit("5/minute")
 async def reset_password(
-    request: PasswordResetSubmit,
+    request: Request,
+    body: PasswordResetSubmit,
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
     """Reset password using token"""
-    if request.new_password != request.confirm_password:
+    if body.new_password != body.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
     
-    result: dict[str, Any] = await service.reset_password(request.token, request.new_password)
+    result: dict[str, Any] = await service.reset_password(body.token, body.new_password)
     
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["reason"])

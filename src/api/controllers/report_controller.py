@@ -14,6 +14,7 @@ from src.data.repositories.log_report_request_repository import LogReportRequest
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/report",
@@ -40,6 +41,7 @@ def get_report_service(db: AsyncSession = Depends(get_db)) -> ReportService:
     )
 
 @router.get("/students-by-course")
+@limiter.limit("20/minute")
 async def get_students_by_course(
     request: Request,
     course_id: Optional[UUID] = Query(None),
@@ -58,6 +60,7 @@ async def get_students_by_course(
     )
 
 @router.get("/course-vacancies")
+@limiter.limit("20/minute")
 async def get_course_vacancies(
     request: Request,
     course_id: Optional[UUID] = Query(None),

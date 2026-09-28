@@ -1,6 +1,6 @@
 """Course component controller"""
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.course_component_service import CourseComponentService
@@ -10,6 +10,7 @@ from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.course_component import CourseComponent, CourseComponentCreate
 from src.domain.schemas.user import User
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/component",
@@ -26,7 +27,9 @@ def get_component_service(db: AsyncSession = Depends(get_db)) -> CourseComponent
 
 
 @router.post("/", response_model=CourseComponent, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def create_component(
+    request: Request,
     dto: CourseComponentCreate,
     current_user: User = Depends(get_current_active_user),
     service: CourseComponentService = Depends(get_component_service)
@@ -42,7 +45,9 @@ async def create_component(
 
 
 @router.patch("/{component_id}/deactivate")
+@limiter.limit("5/minute")
 async def deactivate_component(
+    request: Request,
     component_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: CourseComponentService = Depends(get_component_service)
@@ -60,7 +65,9 @@ async def deactivate_component(
 
 
 @router.patch("/{component_id}/activate")
+@limiter.limit("5/minute")
 async def activate_component(
+    request: Request,
     component_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: CourseComponentService = Depends(get_component_service)
@@ -77,7 +84,9 @@ async def activate_component(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/course/{course_id}", response_model=list[CourseComponent])
+@limiter.limit("20/minute")
 async def get_course_components(
+    request: Request,
     course_id: UUID,
     service: CourseComponentService = Depends(get_component_service)
 ):
@@ -85,7 +94,9 @@ async def get_course_components(
     return await service.get_course_components(course_id)
 
 @router.get("/{component_id}", response_model=CourseComponent)
+@limiter.limit("20/minute")
 async def get_component(
+    request: Request,
     component_id: UUID,
     service: CourseComponentService = Depends(get_component_service)
 ):

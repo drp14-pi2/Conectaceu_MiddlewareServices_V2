@@ -11,9 +11,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.api.middleware.error_logging_middleware import ErrorLoggingMiddleware
 from src.infrastructure.configuration.settings import settings
+from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.data.db_context.database import engine
 from src.api.middleware.exception_handler import register_exception_handlers
 from src.api.middleware.request_size_limit_middleware import RequestSizeLimitMiddleware
+from src.api.middleware.rate_limiter import register_rate_limiter
 
 # Import all routers
 from src.api.controllers.auth_controller import router as auth_router
@@ -37,9 +39,9 @@ from src.api.controllers.health_controller import router as health_router
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events"""
     # Startup
-    print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    print(f"📌 Environment: {settings.ENVIRONMENT}")
-    print(f"🗄️ Database: {settings.DATABASE_NAME} on {settings.DATABASE_HOST}")
+    print(f"{DateTimeHandler.now()} | Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    print(f"{DateTimeHandler.now()} | Environment: {settings.ENVIRONMENT}")
+    print(f"{DateTimeHandler.now()} | Database: {settings.DATABASE_NAME} on {settings.DATABASE_HOST}")
     
     # Initialize database connection pool
     try:
@@ -47,19 +49,19 @@ async def lifespan(app: FastAPI):
         async with engine.connect() as conn:
             from sqlalchemy import text
             result = conn.execute(text("SELECT 1"))
-            print(f"✅ Database connection successful")
+            print(f"{DateTimeHandler.now()} | Database connection successful")
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        print(f"{DateTimeHandler.now()} | Database connection failed: {e}")
         raise
     
     yield
     
     # Shutdown
-    print("👋 Shutting down...")
+    print(f"{DateTimeHandler.now()} | Shutting down...")
     
     # Dispose of database engine
     engine.dispose()
-    print("🗄️ Database connections closed")
+    print(f"{DateTimeHandler.now()} | Database connections closed")
 
 
 def create_app() -> FastAPI:
@@ -112,6 +114,9 @@ def create_app() -> FastAPI:
 
 # Create app instance
 app = create_app()
+
+# Add request rate limiter middleware
+register_rate_limiter(app)
 
 
 if __name__ == "__main__":

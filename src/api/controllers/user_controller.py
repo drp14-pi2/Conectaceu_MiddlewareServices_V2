@@ -17,6 +17,7 @@ from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
 from src.domain.schemas.user_password_history import PasswordChange
 from src.infrastructure.messaging.email.email_service import EmailService
+from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/user",
@@ -50,7 +51,9 @@ def get_email_validation_service(db: AsyncSession = Depends(get_db)) -> EmailVal
     )
 
 @router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def create_user(
+    request: Request,
     dto: UserCreate,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
@@ -68,6 +71,7 @@ async def create_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{user_id}/deactivate")
+@limiter.limit("5/minute")
 async def deactivate_user(
     request: Request,
     user_id: UUID,
@@ -105,6 +109,7 @@ async def deactivate_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{user_id}/activate")
+@limiter.limit("5/minute")
 async def activate_user(
     request: Request,
     user_id: UUID,
@@ -131,7 +136,9 @@ async def activate_user(
 
 
 @router.get("/list", response_model=List[User])
+@limiter.limit("20/minute")
 async def list_users(
+    request: Request,
     name: Optional[str] = Query(None),
     document: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
@@ -177,7 +184,9 @@ async def list_users(
     raise HTTPException(status_code=403, detail="Não autorizado")
 
 @router.get("/{user_id}", response_model=User)
+@limiter.limit("20/minute")
 async def get_user(
+    request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service)
@@ -198,7 +207,9 @@ async def get_user(
     return user
 
 @router.put("/{user_id}", response_model=User)
+@limiter.limit("5/minute")
 async def update_user(
+    request: Request,
     user_id: UUID,
     dto: UserUpdate,
     current_user: User = Depends(get_current_active_user),
@@ -223,7 +234,9 @@ async def update_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{user_id}/password")
+@limiter.limit("5/minute")
 async def change_password(
+    request: Request,
     user_id: UUID,
     dto: PasswordChange,
     current_user: User = Depends(get_current_active_user),
@@ -244,7 +257,9 @@ async def change_password(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/email/validation/request")
+@limiter.limit("5/minute")
 async def request_email_validation(
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     service: EmailValidationService = Depends(get_email_validation_service)
 ):
@@ -257,7 +272,9 @@ async def request_email_validation(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/email/validation/{token}")
+@limiter.limit("5/minute")
 async def activate_email(
+    request: Request,
     token: str,
     current_user: User = Depends(get_current_active_user),
     service: EmailValidationService = Depends(get_email_validation_service)
