@@ -38,9 +38,12 @@ async def create_representative(
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
-    """Create a new legal representative. Admin (1) and Secretary (2) only."""
-    if current_user.user_type_id not in [1, 2]:
+    """Create a new legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
+
+    if (current_user.user_type_id == 5 and current_user.id != dto.user_id):
+        raise HTTPException(status_code=403, detail="Só pode criar representantes para si")
     
     try:
         return await service.create_representative(dto)
@@ -56,9 +59,12 @@ async def update_representative(
     current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service)
 ):
-    """Update a legal representative. Admin (1) and Secretary (2) only."""
-    if current_user.user_type_id not in [1, 2]:
+    """Update a legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
+
+    if (current_user.user_type_id == 5 and current_user.id != dto.user_id):
+        raise HTTPException(status_code=403, detail="Só pode atualizer seus próprios representantes")
     
     try:
         representative: LegalRepresentative | None = await service.update_representative(representative_id, dto)
@@ -81,6 +87,14 @@ async def delete_representative(
     """Delete a legal representative. Admin (1), Secretary (2) and Student (5) only."""
     if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    representative: LegalRepresentative | None = await service.get_by_id(representative_id)
+
+    if not representative:
+        raise HTTPException(status_code=404, detail="Representante não encontrado")
+
+    if (current_user.user_type_id == 5 and current_user.id != representative.user_id):
+        raise HTTPException(status_code=403, detail="Só pode excluir seus próprios representantes")
     
     result: bool = await service.delete_representative(representative_id)
 
