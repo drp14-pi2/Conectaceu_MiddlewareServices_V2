@@ -38,14 +38,12 @@ class CourseUpdate(BaseModel):
     responsible_educator_2: Optional[UUID] = None
     active: Optional[bool] = None
 
-class CourseList(BaseModel):
+class CourseList(CourseBase):
     id: UUID
-    name: str
-    workload: int
     active: bool
-    shift_type_id: int
-    total_seat_limit: int
-    components: List[CourseComponent]
     educational_unit_id: UUID
+    components: List[CourseComponent]
+    responsible_educator_1: Optional[UUID] = None
+    responsible_educator_2: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)

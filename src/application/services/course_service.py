@@ -165,6 +165,7 @@ class CourseService(BaseService):
         name: Optional[str] = None,
         active: Optional[bool] = None,
         educator_id: Optional[UUID] = None,
+        shift_type_id: Optional[int] = None,
         educational_unit_id: Optional[UUID] = None,
         page: int = 1,
         page_size: int = 10
@@ -176,6 +177,7 @@ class CourseService(BaseService):
                 name=name,
                 active=active,
                 educator_id=educator_id,
+                shift_type_id=shift_type_id,
                 educational_unit_id=educational_unit_id,
                 skip=skip,
                 limit=page_size
@@ -200,8 +202,15 @@ class CourseService(BaseService):
                 id=course.id,
                 name=course.name,
                 workload=course.workload,
+                active=course.active,
                 shift_type_id=course.shift_type_id,
                 total_seat_limit=course.total_seat_limit,
+                min_student_age=course.min_student_age,
+                max_student_age=course.max_student_age,
+                educational_unit_id=course.educational_unit_id,
+                created_at=course.created_at,
+                responsible_educator_1=course.responsible_educator_1,
+                responsible_educator_2=course.responsible_educator_2,
                 components=[CourseComponentMapper.model_to_schema(c) for c in components]
             )
             

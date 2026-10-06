@@ -9,7 +9,7 @@ from src.data.repositories.course_component_repository import CourseComponentRep
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.schemas.course import Course, CourseCreate
+from src.domain.schemas.course import Course, CourseCreate, CourseList
 from src.domain.schemas.user import User
 from src.api.middleware.rate_limiter import limiter
 
@@ -127,7 +127,7 @@ async def get_course(
     
     return course
 
-@router.get("/{course_id}/components", response_model=Course)
+@router.get("/{course_id}/components", response_model=CourseList)
 @limiter.limit("20/minute")
 async def get_course_with_components(
     request: Request,
