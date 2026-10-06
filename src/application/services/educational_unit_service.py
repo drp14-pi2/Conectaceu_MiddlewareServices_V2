@@ -1,5 +1,6 @@
 """Educational unit service - business logic for Educational unit"""
 from typing import List, Optional
+from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.data.models.educational_unit_model import EducationalUnitModel
@@ -34,9 +35,9 @@ class EducationalUnitService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
-    async def update(self, dto: EducationalUnitUpdate) -> EducationalUnit:
+    async def update(self, id: UUID, dto: EducationalUnitUpdate) -> EducationalUnit:
         try:
-            existing: EducationalUnitModel | None = await self.repository.get_by_name_and_address(dto.name, dto.zip_code, dto.number)
+            existing: EducationalUnitModel | None = await self.repository.get_by_id(id)
 
             if not existing:
                 raise ValueError('Polo não encontrado')

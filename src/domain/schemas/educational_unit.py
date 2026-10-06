@@ -30,4 +30,4 @@ class EducationalUnitUpdate(BaseModel):
     number: Optional[str] = Field(None, max_length=10)
     complement: Optional[str] = Field(None, max_length=100)
     neighborhood: Optional[str] = Field(None, min_length=3, max_length=100)
-    active: bool
+    active: Optional[bool] = None

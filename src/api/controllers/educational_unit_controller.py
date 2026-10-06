@@ -25,14 +25,14 @@ def get_educational_unit_service(db: AsyncSession = Depends(get_db)) -> Educatio
 
 @router.get("/{id}", response_model=EducationalUnit)
 @limiter.limit("20/minute")
-async def get_educational_units(
+async def get_educational_unit(
     request: Request,
     id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: EducationalUnitService = Depends(get_educational_unit_service)
 ):
     """
-    Get an educational units.
+    Get an educational unit.
     - Admin can view any educational unit
     - Others: 403
     """
@@ -79,10 +79,11 @@ async def create_educational_unit(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.patch("/", response_model=EducationalUnit)
+@router.patch("/{id}", response_model=EducationalUnit)
 @limiter.limit("5/minute")
 async def update_educational_unit(
     request: Request,
+    id: UUID,
     body: EducationalUnitUpdate,
     current_user: User = Depends(get_current_active_user),
     service: EducationalUnitService = Depends(get_educational_unit_service)
@@ -93,6 +94,6 @@ async def update_educational_unit(
         raise HTTPException(status_code=403, detail="Não autorizado")
 
     try:
-        return await service.update(body)
+        return await service.update(id, body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
