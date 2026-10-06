@@ -23,7 +23,7 @@ class AuthService:
         self,
         user_repo: UserRepository,
         log_access_repo: LogAccessRepository,
-        profiles_to_exclude_repo: ProfilesToExcludeRepository = None
+        profiles_to_exclude_repo: ProfilesToExcludeRepository
     ):
         self.user_repo = user_repo
         self.log_access_repo = log_access_repo

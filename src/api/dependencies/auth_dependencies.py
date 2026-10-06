@@ -4,6 +4,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.auth_service import AuthService
+from src.data.repositories.log_access_repository import LogAccessRepository
+from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.user_type_repository import UserTypeRepository
 from src.data.db_context.database import get_db
@@ -14,8 +16,10 @@ security = HTTPBearer()
 def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     """Get AuthService instance"""
     user_repo = UserRepository(db)
+    log_access_repo = LogAccessRepository(db)
+    profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
     
-    return AuthService(user_repo)
+    return AuthService(user_repo, log_access_repo, profiles_to_exclude_repo)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
