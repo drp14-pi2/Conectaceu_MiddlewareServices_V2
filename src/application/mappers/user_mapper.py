@@ -20,7 +20,8 @@ class UserMapper:
             school=dto.school,
             sex_id=dto.sex_id,
             gender_id=dto.gender_id,
-            user_type_id=dto.user_type_id
+            user_type_id=dto.user_type_id,
+            educational_unit_id=dto.educational_unit_id
         )
 
     @staticmethod
