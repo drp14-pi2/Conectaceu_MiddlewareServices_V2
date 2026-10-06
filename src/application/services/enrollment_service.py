@@ -105,7 +105,7 @@ class EnrollmentService(BaseService):
     async def bulk_enroll(self, dto: EnrollmentBulkCreate) -> dict[str, Any]:
         """Bulk enroll users after validation"""
         try:
-            validation: dict[str, Any] = await self._validate_bulk_enrollment(UUID(dto.course_id), dto.user_ids)
+            validation: dict[str, Any] = await self._validate_bulk_enrollment(dto.course_id, dto.user_ids)
             
             if not validation['valid']:
                 return {
@@ -279,15 +279,14 @@ class EnrollmentService(BaseService):
 
             for user_id in user_ids:
                 try:
-                    user_uuid: UUID = UUID(user_id)
-                    existing: EnrollmentModel | None = await self.repository.get_by_user_and_course(user_uuid, course_id)
+                    existing: EnrollmentModel | None = await self.repository.get_by_user_and_course(user_id, course_id)
 
                     if existing and existing.active:
                         troubledEnrollments.append({'user_id': user_id, 'issue': 'Already enrolled'})
                         continue
                     
                     try:
-                        await self._validate_enrollment_rules(user_uuid, course_id)
+                        await self._validate_enrollment_rules(user_id, course_id)
                     except ValueError as e:
                         troubledEnrollments.append({'user_id': user_id, 'issue': str(e)})
                 except ValueError:
