@@ -18,7 +18,7 @@ class BroadcastMessageCreate(BaseModel):
         if len(v) > 2:
             raise ValueError('Maximum of 2 documents allowed')
         for i, doc in enumerate(v):
-            if len(doc) > 10_000_000:
+            if len(doc.fileBase64) > 10_000_000:
                 raise ValueError(f'Document {i+1} exceeds maximum size')
         return v
 
