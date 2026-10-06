@@ -47,7 +47,7 @@ class User(UserBase):
     user_type_id: int
     active: bool
     email_verified: Optional[bool] = False
-    educational_unit_id: UUID
+    educational_unit_id: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
 
