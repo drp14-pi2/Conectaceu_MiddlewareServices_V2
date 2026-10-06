@@ -35,7 +35,7 @@ class UserType(UserTypeBase):
 
 # DocumentType
 class DocumentTypeBase(BaseModel):
-    description: str = Field(min_length=3, max_length=50)
+    description: str = Field(min_length=2, max_length=50)
 
 class DocumentType(DocumentTypeBase):
     id: int
