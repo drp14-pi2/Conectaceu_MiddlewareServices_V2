@@ -59,7 +59,7 @@ async def login(
         origin_ip_address=user_ip,
         user_agent=user_agent)
     
-    if not result['access_token']:
+    if not result or 'access_token' not in result:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=result['message']
