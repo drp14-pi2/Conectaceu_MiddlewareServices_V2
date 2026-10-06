@@ -1,10 +1,14 @@
 """Base models for different entity types"""
+from datetime import datetime, timedelta, timezone
 import uuid
-from sqlalchemy import Column, Integer, DateTime, func
+from sqlalchemy import Column, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from src.data.db_context.types import UUIDBinary
 
 Base = declarative_base()
+
+def now():
+    return datetime.now(timezone(timedelta(hours=-3)))  # Brazil GMT-3
 
 class BaseModel(Base):
     """Abstract base"""
@@ -24,7 +28,7 @@ class UuidPkBaseModel(BaseModel):
     __abstract__ = True
     
     id = Column(UUIDBinary, primary_key=True, default=lambda: uuid.uuid4())
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=now, nullable=False)
 
 class UuidPkUpdatableBaseModel(BaseModel):
     """
@@ -34,12 +38,12 @@ class UuidPkUpdatableBaseModel(BaseModel):
     __abstract__ = True
     
     id = Column(UUIDBinary, primary_key=True, default=lambda: uuid.uuid4())
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=now, nullable=False)
+    updated_at = Column(DateTime, default=now, onupdate=now)
     
 class LogBaseModel(BaseModel):
     """Base for log tables"""
     __abstract__ = True
     
     id = Column(UUIDBinary, primary_key=True, default=lambda: uuid.uuid4())
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=now, nullable=False)
