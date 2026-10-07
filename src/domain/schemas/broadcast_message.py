@@ -1,5 +1,6 @@
 """Broadcast message schemas"""
 from typing import Optional, List
+from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 class BroadcastMessageCreate(BaseModel):
@@ -9,9 +10,9 @@ class BroadcastMessageCreate(BaseModel):
     send_email: bool = False
     send_whatsapp: bool = False
     send_sms: bool = False
-    recipient_user_ids: Optional[List[str]] = None
-    recipient_course_id: Optional[str] = None
-    recipient_user_type_id: Optional[int] = None
+    recipient_user_ids: Optional[List[UUID]] = None
+    recipient_course_id: Optional[UUID] = None
+    recipient_user_type_id: Optional[UUID] = None
 
     @field_validator('documents')
     def validate_documents(cls, v: List[str]) -> List[str]:

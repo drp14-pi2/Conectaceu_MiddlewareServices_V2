@@ -149,8 +149,8 @@ class BroadcastService:
     # Private methods
     async def _stream_recipients(
         self,
-        user_ids: Optional[List[str]] = None,
-        course_id: Optional[str] = None
+        user_ids: Optional[List[UUID]] = None,
+        course_id: Optional[UUID] = None
     ) -> AsyncGenerator[UserModel, None]:
         """
         Stream recipients one at a time from different sources.
@@ -172,7 +172,7 @@ class BroadcastService:
         
         # By course - stream through enrollments
         if course_id:
-            async for user in self._stream_students_by_course_id(seen_ids, UUID(course_id)):
+            async for user in self._stream_students_by_course_id(seen_ids, course_id):
                 yield user
             return
 
@@ -200,11 +200,10 @@ class BroadcastService:
             
             page += 1
 
-    async def _stream_students_by_ids(self, seen_ids: set, user_ids: List[str]) -> AsyncGenerator[UserModel, None]:
+    async def _stream_students_by_ids(self, seen_ids: set, user_ids: List[UUID]) -> AsyncGenerator[UserModel, None]:
         """Stream all active students by their IDs."""
         while True:
-            for user_id_str in user_ids:
-                user_id: UUID = UUID(user_id_str)
+            for user_id in user_ids:
                 user: UserModel | None = await self.user_repo.get_by_id(user_id)
                 if user and user.active and user.id not in seen_ids and user.email_verified:
                     seen_ids.add(user.id)

@@ -54,7 +54,7 @@ class DocumentService(BaseService):
             if not dto.user_id:
                 raise ValueError('Documento precisa estar atrelado a um usuário')
             
-            user = await self.user_repo.get_by_id(UUID(dto.user_id))
+            user = await self.user_repo.get_by_id(dto.user_id)
             if not user:
                 raise ValueError('Usuário não encontrado')
             

@@ -222,15 +222,16 @@ class AuthService:
 
             if not user_id:
                 return None
-            
-            user: UserModel = await self.user_repo.get_by_id(UUID(user_id))
+
+            user_uuid: UUID = UUID(user_id)
+            user: UserModel = await self.user_repo.get_by_id(user_uuid)
 
             if not user or not user.active:
                 return None
             
             # Create new tokens
-            access_token: str = await self.create_access_token(UUID(user_id), user.user_type_id)
-            new_refresh_token: str = await self.create_refresh_token(UUID(user_id))
+            access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
+            new_refresh_token: str = await self.create_refresh_token(user_uuid)
             
             return {
                 "access_token": access_token,

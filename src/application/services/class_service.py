@@ -37,7 +37,7 @@ class ClassService(BaseService):
         """Create a new class"""
         try:
             # Validate component exists and is active
-            component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(dto.component_id))
+            component: CourseComponentModel | None = await self.component_repo.get_by_id(dto.course_component_id)
 
             if not component:
                 raise ValueError("Componente não encontrado")
@@ -55,7 +55,7 @@ class ClassService(BaseService):
     
     async def bulk_create_classes(self, dto: ClassBulkCreate) -> dict:
         """Create one class per date in the range"""
-        component: CourseComponentModel | None = await self.component_repo.get_by_id(UUID(dto.course_component_id))
+        component: CourseComponentModel | None = await self.component_repo.get_by_id(dto.course_component_id)
 
         if not component:
             raise ValueError("Componente não encontrado")
@@ -71,7 +71,7 @@ class ClassService(BaseService):
         for class_date in dates:
             # Check if class already exists for this component and date
             existing_class: ClassModel | None = await self.repository.get_by_date_and_component(
-                component_id=UUID(dto.course_component_id),
+                component_id=dto.course_component_id,
                 date=class_date
             )
 
@@ -86,7 +86,7 @@ class ClassService(BaseService):
                 seats_in_use=0,
                 active=True,
                 date=datetime.combine(class_date, datetime.min.time()),
-                course_component_id=UUID(dto.course_component_id)
+                course_component_id=dto.course_component_id
             )
             class_model: ClassModel = ClassMapper.create_to_model(new_class)
             await self.repository.create(class_model)
@@ -124,7 +124,7 @@ class ClassService(BaseService):
         try:
             skip: int = (filters.page - 1) * filters.page_size
             models: List[ClassModel] = await self.repository.find_by_filters(
-                component_id=UUID(filters.component_id) if filters.component_id else None,
+                component_id=filters.component_id if filters.component_id else None,
                 active=filters.active,
                 skip=skip,
                 limit=filters.page_size

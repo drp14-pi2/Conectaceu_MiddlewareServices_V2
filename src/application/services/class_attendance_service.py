@@ -46,7 +46,7 @@ class ClassAttendanceService(BaseService):
         self.absence_justification_repo = absence_justification_repo
     
     async def take_attendance(self, dto: BulkAttendanceCreate) -> dict[str, Any]:
-        class_id: UUID = UUID(dto.class_id)
+        class_id: UUID = dto.class_id
         class_: ClassModel | None = await self.class_repo.get_by_id(class_id)
 
         if not class_:
@@ -66,7 +66,7 @@ class ClassAttendanceService(BaseService):
         updated: int = 0
         
         for entry in dto.attendances:
-            user_id: UUID = UUID(entry.user_id)
+            user_id: UUID = entry.user_id
             
             # Validate user is enrolled in the course
             enrollment: EnrollmentModel | None = await self.enrollment_repo.get_by_user_and_course(user_id, course_id)
@@ -196,7 +196,7 @@ class ClassAttendanceService(BaseService):
         """
         Student submits a justification document for an absence.
         """
-        if user_id != UUID(document.user_id):
+        if user_id != document.user_id:
             raise ValueError('Você só pode enviar justificativas por si mesmo')
 
         # Verify the attendance record exists and belongs to this user
@@ -233,7 +233,7 @@ class ClassAttendanceService(BaseService):
         }
 
     # Private methods
-    async def _create_document(self, document: DocumentCreate):
+    async def _create_document(self, document: DocumentCreate) -> DocumentModel:
         from src.application.mappers.document_mapper import DocumentMapper
 
         doc_model: DocumentModel = DocumentMapper.create_to_model(document)
@@ -251,6 +251,8 @@ class ClassAttendanceService(BaseService):
             document_id=saved_doc.id
         )
         await doc_validation_repo.create(doc_validation)
+
+        return saved_doc
 
     async def _create_justification(self, attendance_id: UUID, document_id: UUID) -> StudentAbsenceJustificationModel:
         justification: StudentAbsenceJustificationCreate = StudentAbsenceJustificationCreate(

@@ -21,7 +21,7 @@ class ClassCreate(ClassBase):
     pass
 
 class ClassBulkCreate(BaseModel):
-    course_component_id: str
+    course_component_id: UUID
     start_date: datetime
     end_date: datetime
     days_of_week: List[int] = Field(default=[0, 1, 2, 3, 4, 5, 6])
@@ -56,7 +56,7 @@ class ClassDetail(Class):
 
 class ClassFilter(BaseModel):
     """DTO for filtering classes"""
-    component_id: Optional[str] = None
+    component_id: Optional[UUID] = None
     active: Optional[bool] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
