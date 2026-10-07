@@ -13,3 +13,8 @@ class DateTimeHandler:
     def utc_now() -> datetime:
         """Get current UTC time"""
         return datetime.now(DateTimeHandler.UTC_TZ)
+
+    @staticmethod
+    def to_brazil(dt: datetime) -> datetime:
+        """Convert any aware datetime to São Paulo time"""
+        return dt.astimezone(DateTimeHandler.BRAZIL_TZ)
