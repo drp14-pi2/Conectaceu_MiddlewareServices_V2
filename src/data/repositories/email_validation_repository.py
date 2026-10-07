@@ -23,3 +23,11 @@ class EmailValidationRepository(BaseRepository):
         ))
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def delete_by_user_id(self, user_id: UUID) -> bool:
+        model = await self.get_by_user_id(user_id)
+        if model:
+            await self.session.delete(model)
+            await self.session.flush()
+            return True
+        return False

@@ -60,7 +60,7 @@ class EmailValidationService(BaseService):
         await self.repository.session.commit()
 
         # Deletes email_validation entry
-        await self.repository.delete(email_validation.user_id)
+        await self.repository.delete_by_user_id(email_validation.user_id)
         await self.repository.session.commit()
 
     # Private methods
@@ -91,7 +91,7 @@ class EmailValidationService(BaseService):
         return await self.repository.create(email_validation)
 
     def _is_token_expired(self, expires_at: datetime) -> bool:
-        return expires_at < DateTimeHandler.now();
+        return DateTimeHandler.to_brazil(expires_at) < DateTimeHandler.now();
 
     def _get_new_expiration_date(self) -> datetime:
         return DateTimeHandler.now() + timedelta(hours=settings.EMAIL_VALIDATION_TOKEN_EXPIRATION_HOURS)
