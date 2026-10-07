@@ -15,6 +15,7 @@ from src.data.repositories.legal_representative_repository import LegalRepresent
 from src.data.repositories.user_repository import UserRepository
 from src.domain.schemas.document import Document, DocumentCreate
 from src.domain.schemas.document_validation import DocumentValidation, DocumentValidationInput
+from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
 from src.domain.schemas.user import User
 from src.api.middleware.rate_limiter import limiter
 
@@ -29,15 +30,17 @@ def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentService:
     repository = DocumentRepository(db)
     user_repo = UserRepository(db)
     address_repo = AddressRepository(db)
+    log_doc_request_repo = LogDocumentRequestRepository(db)
 
-    return DocumentService(repository, user_repo, address_repo)
+    return DocumentService(repository, user_repo, address_repo, log_doc_request_repo)
 
 def get_validation_service(db: AsyncSession = Depends(get_db)) -> DocumentValidationService:
     """Dependency injection for DocumentValidationService"""
     repository = DocumentValidationRepository(db)
     representative_repo = LegalRepresentativeRepository(db)
+    doc_repo = DocumentRepository(db)
 
-    return DocumentValidationService(repository, representative_repo)
+    return DocumentValidationService(repository, representative_repo, doc_repo)
 
 @router.post("/", response_model=Document, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")

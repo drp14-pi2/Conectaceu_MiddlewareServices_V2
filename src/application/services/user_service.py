@@ -151,7 +151,7 @@ class UserService(BaseService):
                 if existing and existing.id != model.id:
                     raise ValueError("E-mail já registrado")
             
-            updated_model: UserModel = UserMapper.create_to_model(dto)
+            updated_model: UserModel = UserMapper.update_model(model, dto)
             saved_model: UserModel = await self.repository.update(updated_model)
             await self.repository.session.commit()
             

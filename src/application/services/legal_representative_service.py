@@ -65,17 +65,16 @@ class LegalRepresentativeService(BaseService):
 
             if not model:
                 raise ValueError("Representante não encontrado")
-
-            dto.document = re.sub(r'\D', '', dto.document)
             
             # Check document uniqueness
             if dto.document:
+                dto.document = re.sub(r'\D', '', dto.document)
                 exists: bool = await self.repository.document_exists(dto.document, exclude_id=representative_id)
 
                 if exists:
                     raise ValueError("Documento já registrado para outro usuário")
             
-            updated_model: LegalRepresentativeModel = LegalRepresentativeMapper.update_model(dto)
+            updated_model: LegalRepresentativeModel = LegalRepresentativeMapper.update_model(model, dto)
             saved_model: LegalRepresentativeModel = await self.repository.update(updated_model)
             await self.repository.session.commit()
             
