@@ -78,10 +78,10 @@ class BroadcastService:
                                 to_email=user.email,
                                 subject=dto.subject,
                                 message=self._format_html_message(dto.message),
-                                document_1_base64=document_1.fileBase64,
-                                document_2_base64=document_2.fileBase64,
-                                document_1_name=document_1.fileNameWithExtension,
-                                document_2_name=document_2.fileNameWithExtension
+                                document_1_base64=document_1.fileBase64 if document_1 else None,
+                                document_2_base64=document_2.fileBase64 if document_2 else None,
+                                document_1_name=document_1.fileNameWithExtension if document_1 else None,
+                                document_2_name=document_2.fileNameWithExtension if document_2 else None
                             )
                             
                             if email_sent:
@@ -208,6 +208,7 @@ class BroadcastService:
                 if user and user.active and user.id not in seen_ids and user.email_verified:
                     seen_ids.add(user.id)
                     yield user
+            break;
 
     async def _stream_students_by_course_id(self, seen_ids: set, course_uuid: UUID) -> AsyncGenerator[UserModel, None]:
         """Stream all active students by course"""
@@ -228,6 +229,7 @@ class BroadcastService:
                     if user and user.active and user.id not in seen_ids and user.email_verified:
                         seen_ids.add(user.id)
                         yield user
+            break;
 
     async def _stream_enrollments(self, course_id: UUID) -> AsyncGenerator[EnrollmentModel, None]:
         """Stream active enrollments for a class"""
