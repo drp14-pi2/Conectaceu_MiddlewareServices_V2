@@ -5,7 +5,12 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.enrollment_service import EnrollmentService
+from src.application.services.security_service import SecurityService
+from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
@@ -30,15 +35,39 @@ def get_enrollment_service(db: AsyncSession = Depends(get_db)) -> EnrollmentServ
 
     return EnrollmentService(repository, user_repo, course_repo, waiting_list_repo)
 
+def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
+    """Dependency injection for SecurityService"""
+    class_repo = ClassRepository(db)
+    component_repo = CourseComponentRepository(db)
+    course_repo = CourseRepository(db)
+    user_repo = UserRepository(db)
+    document_repo = DocumentRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+
+    return SecurityService(
+        class_repo,
+        component_repo,
+        course_repo,
+        user_repo,
+        document_repo,
+        enrollment_repo,
+        representative_repo
+    )
+
 @router.post("/", response_model=Enrollment, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def enroll_user(
     request: Request,
     dto: EnrollmentCreate,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Enroll a user in a class."""
+    if not await security_service.can_enroll_users(current_user.id, [dto.user_id], dto.course_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
     try:
         user_ip: str = request.client.host if request.client else "unknown"
 
@@ -56,12 +85,16 @@ async def bulk_enroll(
     request: Request,
     dto: EnrollmentBulkCreate,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Bulk enroll users in a class.
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
+    if not await security_service.can_enroll_users(current_user.id, dto.user_ids, dto.course_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     if current_user.user_type_id not in [1, 2, 3, 4]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -73,13 +106,17 @@ async def get_user_enrollments(
     request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Get all enrollments for a user.
     - Staff can view any user
     - Users can view their own
     """
+    if not await security_service.can_access_other_user(current_user.id, user_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     if current_user.user_type_id not in [1, 2, 3, 4] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -91,13 +128,17 @@ async def get_enrollment_summary(
     request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Get enrollment summary for a user.
     - Staff can view any user
     - Users can view their own
     """
+    if not await security_service.can_access_other_user(current_user.id, user_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
     if current_user.user_type_id not in [1, 2, 3, 4] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -109,12 +150,16 @@ async def get_course_enrollments(
     request: Request,
     course_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Get all enrollments for a class.
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
+    if not await security_service.can_access_course(current_user.id, course_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
     if current_user.user_type_id == 5:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -126,9 +171,13 @@ async def unenroll_user(
     request: Request,
     enrollment_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: EnrollmentService = Depends(get_enrollment_service)
+    service: EnrollmentService = Depends(get_enrollment_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Unenroll a user from a class."""
+    if not await security_service.can_access_enrollment(current_user.id, enrollment_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     try:
         user_ip: str = request.client.host if request.client else "unknown"
         result: bool = await service.unenroll_user(

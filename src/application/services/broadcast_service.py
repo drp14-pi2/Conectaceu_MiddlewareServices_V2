@@ -66,7 +66,8 @@ class BroadcastService:
             
             async for user in self._stream_recipients(
                 dto.recipient_user_ids,
-                dto.recipient_course_id
+                dto.recipient_course_id,
+                dto.educational_units_ids
             ):
                 try:
                     results['total_processed'] += 1
@@ -150,7 +151,8 @@ class BroadcastService:
     async def _stream_recipients(
         self,
         user_ids: Optional[List[UUID]] = None,
-        course_id: Optional[UUID] = None
+        course_id: Optional[UUID] = None,
+        educational_units_ids: Optional[list[UUID]] = None
     ) -> AsyncGenerator[UserModel, None]:
         """
         Stream recipients one at a time from different sources.
@@ -158,9 +160,9 @@ class BroadcastService:
         """
         seen_ids = set()
 
-        # If no filters, stream all active users
+        # If no filters, stream all active users and by educational units if provided
         if (not user_ids or len(user_ids) <= 0) and not course_id:
-            async for user in self._stream_all_students(seen_ids):
+            async for user in self._stream_all_students(seen_ids, educational_units_ids):
                 yield user
             return
         
@@ -176,7 +178,7 @@ class BroadcastService:
                 yield user
             return
 
-    async def _stream_all_students(self, seen_ids: set) -> AsyncGenerator[UserModel, None]:
+    async def _stream_all_students(self, seen_ids: set, educational_units_ids: list[UUID]) -> AsyncGenerator[UserModel, None]:
         """Stream all active students in batches."""
         page_size: int = 100
         page: int = 0
@@ -186,6 +188,7 @@ class BroadcastService:
                 user_type_id=5, # Students only
                 active=True,
                 email_verified=True,
+                educational_units_ids=educational_units_ids,
                 skip=page * page_size,
                 limit=page_size
             )

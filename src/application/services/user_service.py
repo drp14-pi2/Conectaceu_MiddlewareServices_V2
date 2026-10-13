@@ -2,7 +2,6 @@
 import re
 from typing import Any, List, Optional
 from uuid import UUID
-import bcrypt
 
 from src.application.logging.application_logger import ApplicationLogger
 from src.application.mappers.user_mapper import UserMapper
@@ -285,7 +284,7 @@ class UserService(BaseService):
         phoneNumber: Optional[str] = None,
         user_type_id: Optional[int] = None,
         active: Optional[bool] = None,
-        educational_unit_id: Optional[UUID] = None,
+        educational_units_ids: Optional[list[UUID]] = None,
         page: int = 1,
         page_size: int = 10,
     ) -> List[User]:
@@ -299,7 +298,7 @@ class UserService(BaseService):
                 phoneNumber=phoneNumber,
                 user_type_id=user_type_id,
                 active=active,
-                educational_unit_id=educational_unit_id,
+                educational_units_ids=educational_units_ids,
                 skip=skip,
                 limit=page_size
             )

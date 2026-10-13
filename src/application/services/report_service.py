@@ -39,6 +39,7 @@ class ReportService:
         self,
         course_id: Optional[UUID] = None,
         component_id: Optional[UUID] = None,
+        educational_unit_id: Optional[UUID] = None,
         requested_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> List[Dict[str, Any]]:
@@ -60,9 +61,15 @@ class ReportService:
                 course: CourseModel | None = await self.course_repo.get_by_id(course_id)
 
                 if course:
+                    if educational_unit_id and course.educational_unit_id != educational_unit_id:
+                        return report_data;
+
                     courses.append(course)
             else:
-                courses = await self.course_repo.get_all()
+                if educational_unit_id:
+                    courses = await self.course_repo.find_by_filters(educational_unit_id=educational_unit_id)
+                else:
+                    courses = await self.course_repo.get_all()
             
             for course in courses:
                 course_uuid: UUID = course.id
@@ -113,6 +120,7 @@ class ReportService:
     async def get_course_vacancies(
         self,
         course_id: Optional[UUID] = None,
+        educational_unit_id: Optional[UUID] = None,
         requested_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
     ) -> List[Dict[str, Any]]:
@@ -132,9 +140,15 @@ class ReportService:
                 course: CourseModel | None = await self.course_repo.get_by_id(course_id)
 
                 if course:
+                    if educational_unit_id and course.educational_unit_id != educational_unit_id:
+                        return report_data;
+
                     courses.append(course)
             else:
-                courses = await self.course_repo.get_all()
+                if educational_unit_id:
+                    courses = await self.course_repo.find_by_filters(educational_unit_id=educational_unit_id)
+                else:
+                    courses = await self.course_repo.get_all()
             
             for course in courses:
                 course_uuid: UUID = course.id

@@ -56,7 +56,7 @@ class ClassDetail(Class):
 
 class ClassFilter(BaseModel):
     """DTO for filtering classes"""
-    component_id: Optional[UUID] = None
+    component_id: UUID
     active: Optional[bool] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

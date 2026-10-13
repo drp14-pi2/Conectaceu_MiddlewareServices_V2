@@ -45,7 +45,7 @@ class UserRepository(BaseRepository[UserModel]):
         sex_id: Optional[int] = None,
         gender_id: Optional[int] = None,
         active: Optional[bool] = None,
-        educational_unit_id: Optional[UUID] = None,
+        educational_units_ids: Optional[list[UUID]] = None,
         email_verified: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
@@ -69,8 +69,8 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.gender_id == gender_id)
         if active is not None:
             conditions.append(UserModel.active == active)
-        if educational_unit_id is not None:
-            conditions.append(UserModel.educational_unit_id == educational_unit_id)
+        if educational_units_ids:
+            conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
         if email_verified is not None:
             conditions.append(UserModel.email_verified == email_verified)
         
@@ -116,6 +116,14 @@ class UserRepository(BaseRepository[UserModel]):
     async def get_students(self, skip: int = 0, limit: int = 100) -> List[UserModel]:
         """Get all students (user_type_id = 5)"""
         return await self.find_by_filters(user_type_id=5, active=True, skip=skip, limit=limit)
+
+    async def find_by_educational_unit(self, user_id: UUID, educational_unit_id: UUID) -> Optional[UserModel]:
+        stmt = select(UserModel).where(and_(
+            UserModel.id == user_id,
+            UserModel.educational_unit_id == educational_unit_id
+        ))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
     
     async def find_by_password_reset_token(self, token: str) -> Optional[UserModel]:
         """Find user by password reset token"""

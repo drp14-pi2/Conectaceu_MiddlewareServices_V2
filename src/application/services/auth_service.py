@@ -29,7 +29,7 @@ class AuthService:
         self.log_access_repo = log_access_repo
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
-    async def create_access_token(self, user_id: UUID, user_type_id: int) -> str:
+    async def create_access_token(self, user_id: UUID, user_type_id: int, educational_unit_id: UUID) -> str:
         """Create JWT access token"""
         try:
             now: datetime = DateTimeHandler.utc_now()
@@ -37,6 +37,7 @@ class AuthService:
             payload: dict[str, Any] = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
+                "educational_unit_id": educational_unit_id,
                 "exp": int(expire.timestamp()),
                 "iat": int(now.timestamp())
             }
@@ -176,7 +177,7 @@ class AuthService:
                 )
                 await self.user_repo.session.commit()
 
-            access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
+            access_token: str = await self.create_access_token(user_uuid, user.user_type_id, user.educational_unit_id)
             refresh_token: str = await self.create_refresh_token(user_uuid)
             await self._log_access(
                 success=True,
@@ -196,7 +197,8 @@ class AuthService:
                     "id": str(user_uuid),
                     "name": user.name,
                     "email": user.email,
-                    "user_type_id": user.user_type_id
+                    "user_type_id": user.user_type_id,
+                    "educational_unit_id": user.educational_unit_id
                 }
             }
         except Exception as e:
@@ -230,7 +232,7 @@ class AuthService:
                 return None
             
             # Create new tokens
-            access_token: str = await self.create_access_token(user_uuid, user.user_type_id)
+            access_token: str = await self.create_access_token(user_uuid, user.user_type_id, user.educational_unit_id)
             new_refresh_token: str = await self.create_refresh_token(user_uuid)
             
             return {

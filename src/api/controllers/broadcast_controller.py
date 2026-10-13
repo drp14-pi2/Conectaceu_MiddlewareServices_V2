@@ -4,8 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.auth_dependencies import get_current_active_user, require_permission
 from src.application.services.broadcast_service import BroadcastService
+from src.application.services.security_service import SecurityService
 from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.course_repository import CourseRepository
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.user_repository import UserRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.log_broadcast_message_repository import LogBroadcastMessageRepository
@@ -46,6 +50,25 @@ def get_broadcast_service(db: AsyncSession = Depends(get_db)) -> BroadcastServic
         whatsapp_service
     )
 
+def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
+    """Dependency injection for SecurityService"""
+    class_repo = ClassRepository(db)
+    component_repo = CourseComponentRepository(db)
+    course_repo = CourseRepository(db)
+    user_repo = UserRepository(db)
+    document_repo = DocumentRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+
+    return SecurityService(
+        class_repo,
+        component_repo,
+        course_repo,
+        user_repo,
+        document_repo,
+        enrollment_repo,
+        representative_repo
+    )
 
 @router.post("/", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
@@ -53,14 +76,27 @@ async def send_broadcast(
     request: Request,
     dto: BroadcastMessageCreate,
     current_user: User = Depends(require_permission(PermissionTypes.SEND_BROADCAST_MESSAGE)),
-    service: BroadcastService = Depends(get_broadcast_service)
+    service: BroadcastService = Depends(get_broadcast_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Send a broadcast message via selected channels.
     Requires: send_broadcast_message permission (Admin/Secretary only).
     """
     try:
+        if current_user.user_type_id not in [1, 2]:
+            raise HTTPException(status_code=403, detail="Não autorizado")
+        
         user_ip: str = request.client.host if request.client else "unknown"
+        
+        if current_user.user_type_id == 2:
+            if any(unit_id != current_user.educational_unit_id for unit_id in dto.educational_units_ids):
+                raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
+            if dto.recipient_user_ids and not await security_service.can_access_other_users(current_user.id, dto.recipient_user_ids):
+                raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
+            return await service.send_broadcast(dto, current_user.id, user_ip)
 
         return await service.send_broadcast(dto, current_user.id, user_ip)
     except ValueError as e:

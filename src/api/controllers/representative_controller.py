@@ -5,8 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.legal_representative_service import LegalRepresentativeService
+from src.application.services.security_service import SecurityService
+from src.data.repositories.class_repository import ClassRepository
+from src.data.repositories.course_component_repository import CourseComponentRepository
+from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
+from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
@@ -30,15 +35,39 @@ def get_representative_service(db: AsyncSession = Depends(get_db)) -> LegalRepre
 
     return LegalRepresentativeService(repository, document_repo, document_validation_repo, user_repo)
 
+def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
+    """Dependency injection for SecurityService"""
+    class_repo = ClassRepository(db)
+    component_repo = CourseComponentRepository(db)
+    course_repo = CourseRepository(db)
+    user_repo = UserRepository(db)
+    document_repo = DocumentRepository(db)
+    enrollment_repo = EnrollmentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+
+    return SecurityService(
+        class_repo,
+        component_repo,
+        course_repo,
+        user_repo,
+        document_repo,
+        enrollment_repo,
+        representative_repo
+    )
+
 @router.post("/", response_model=LegalRepresentative, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def create_representative(
     request: Request,
     dto: LegalRepresentativeCreate,
     current_user: User = Depends(get_current_active_user),
-    service: LegalRepresentativeService = Depends(get_representative_service)
+    service: LegalRepresentativeService = Depends(get_representative_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Create a new legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if not await security_service.can_access_other_user(current_user.id, dto.user_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+
     if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
 
@@ -57,9 +86,13 @@ async def update_representative(
     representative_id: UUID,
     dto: LegalRepresentativeUpdate,
     current_user: User = Depends(get_current_active_user),
-    service: LegalRepresentativeService = Depends(get_representative_service)
+    service: LegalRepresentativeService = Depends(get_representative_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Update a legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if not await security_service.can_access_representative(current_user.id, representative_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
 
@@ -82,9 +115,13 @@ async def delete_representative(
     request: Request,
     representative_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: LegalRepresentativeService = Depends(get_representative_service)
+    service: LegalRepresentativeService = Depends(get_representative_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Delete a legal representative. Admin (1), Secretary (2) and Student (5) only."""
+    if not await security_service.can_access_representative(current_user.id, representative_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     if current_user.user_type_id not in [1, 2, 5]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
@@ -109,13 +146,17 @@ async def get_user_representatives(
     request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: LegalRepresentativeService = Depends(get_representative_service)
+    service: LegalRepresentativeService = Depends(get_representative_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """
     Get all legal representatives for a user.
     - Admin/Secretary can view any
     - Users can view their own
     """
+    if not await security_service.can_access_other_user(current_user.id, user_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Só pode ver seus próprios representantes")
     
@@ -127,9 +168,13 @@ async def get_representative(
     request: Request,
     representative_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: LegalRepresentativeService = Depends(get_representative_service)
+    service: LegalRepresentativeService = Depends(get_representative_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Get representative by ID."""
+    if not await security_service.can_access_representative(current_user.id, representative_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
     representative: LegalRepresentative | None = await service.get_by_id(representative_id)
 
     if not representative:

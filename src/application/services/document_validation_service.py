@@ -77,10 +77,15 @@ class DocumentValidationService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_pending_validations(self, skip: int = 0, limit: int = 100) -> List[DocumentValidation]:
+    async def get_pending_validations(
+        self,
+        educational_unit: Optional[UUID] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[DocumentValidation]:
         """Get pending document validations"""
         try:
-            models = await self.repository.get_pending_validations(skip, limit)
+            models = await self.repository.get_pending_validations(educational_unit, skip, limit)
             
             return [DocumentValidationMapper.model_to_schema(model) for model in models]
         except Exception as e:

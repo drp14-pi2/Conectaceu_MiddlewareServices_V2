@@ -13,6 +13,7 @@ class BroadcastMessageCreate(BaseModel):
     recipient_user_ids: Optional[List[UUID]] = None
     recipient_course_id: Optional[UUID] = None
     recipient_user_type_id: Optional[UUID] = None
+    educational_units_ids: Optional[List[UUID]] = None
 
     @field_validator('documents')
     def validate_documents(cls, v: List[str]) -> List[str]:
