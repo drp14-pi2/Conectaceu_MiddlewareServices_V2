@@ -59,7 +59,7 @@ class PasswordResetService:
             await self.email_service.send_password_reset_email(
                 to_email=user.email,
                 reset_token=reset_token,
-                frontend_url=settings.APP_FRONTEND_URL
+                frontend_url=f'{settings.APP_FRONTEND_URL}/{settings.PASSWORD_RECOVERY_FRONTEND_PATH}'
             )
             
             return {"message": RETURN_MESSAGE}
