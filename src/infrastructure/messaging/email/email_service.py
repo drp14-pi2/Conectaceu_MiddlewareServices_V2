@@ -121,7 +121,7 @@ class EmailService:
         frontend_url: str
     ) -> bool:
         """Send password reset email"""
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+        reset_link = f"{frontend_url}?token={reset_token}"
         
         subject = "ConectaCEU - Recuperação de Senha"
         

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 class BroadcastMessageCreate(BaseModel):
     subject: str = Field(min_length=5, max_length=200)
     message: str = Field(min_length=1, max_length=4000)
-    documents: List[BroadcastDocument] = Field(default_factory=list)
+    documents: List[BroadcastDocument] = Field([])
     send_email: bool = False
     send_whatsapp: bool = False
     send_sms: bool = False

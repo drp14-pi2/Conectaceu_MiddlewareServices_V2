@@ -78,6 +78,9 @@ class AppSettings(BaseSettings):
     # Enrollment
     ENROLLMENT_MONTHS: list[int] = Field(default=[])
 
+    # Password recovery
+    PASSWORD_RECOVERY_FRONTEND_PATH: str = Field(default="")
+
     # E-mail validation
     VALIDATE_EMAIL_VALIDATION_TOKEN_ENDPOINT: str = Field(default="")
     EMAIL_VALIDATION_TOKEN_EXPIRATION_HOURS: int = Field(default=1, ge=1)
