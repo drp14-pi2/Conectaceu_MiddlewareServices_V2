@@ -29,7 +29,7 @@ class AuthService:
         self.log_access_repo = log_access_repo
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
     
-    async def create_access_token(self, user_id: UUID, user_type_id: int, educational_unit_id: UUID) -> str:
+    async def create_access_token(self, user_id: UUID, user_type_id: int, educational_unit_id: Optional[UUID] = None) -> str:
         """Create JWT access token"""
         try:
             now: datetime = DateTimeHandler.utc_now()
@@ -37,7 +37,7 @@ class AuthService:
             payload: dict[str, Any] = {
                 "sub": str(user_id),
                 "user_type_id": user_type_id,
-                "educational_unit_id": educational_unit_id,
+                "educational_unit_id": str(educational_unit_id) if educational_unit_id else None,
                 "exp": int(expire.timestamp()),
                 "iat": int(now.timestamp())
             }
