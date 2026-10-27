@@ -57,9 +57,6 @@ async def reset_password(
     service: PasswordResetService = Depends(get_password_reset_service)
 ):
     """Reset password using token"""
-    if body.new_password != body.confirm_password:
-        raise HTTPException(status_code=400, detail="Passwords do not match")
-    
     result: dict[str, Any] = await service.reset_password(body.token, body.new_password)
     
     if not result["success"]:
