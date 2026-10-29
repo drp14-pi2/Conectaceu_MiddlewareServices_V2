@@ -17,8 +17,7 @@ from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/reference",
-    tags=["Reference"],
-    dependencies=[Depends(get_current_active_user)]
+    tags=["Reference"]
 )
 
 # Sex Types
