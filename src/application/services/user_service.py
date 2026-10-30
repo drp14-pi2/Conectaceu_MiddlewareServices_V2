@@ -115,8 +115,8 @@ class UserService(BaseService):
 
             educational_unit: EducationalUnitModel | None = await self.educational_unit_repo.get_by_id(dto.educational_unit_id)
 
-            if not educational_unit:
-                raise ValueError('Polo não encontrado')
+            if not educational_unit or not educational_unit.active:
+                raise ValueError('Polo inválido')
             
             # Save user
             saved_model: UserModel = await self.repository.create(model)
