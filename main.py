@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     print(f"{DateTimeHandler.now()} | Shutting down...")
     
     # Dispose of database engine
-    engine.dispose()
+    await engine.dispose()
     print(f"{DateTimeHandler.now()} | Database connections closed")
 
 
