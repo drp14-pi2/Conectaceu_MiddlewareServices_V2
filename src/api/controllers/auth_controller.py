@@ -97,6 +97,7 @@ async def public_register(
     Documents need validation by a Secretary.
     """
     try:
+        dto.user_type_id = 5 # Force student for public registration
         user: User = await service.create_user(
             dto,
             created_by_user_id=None  # Public registration
