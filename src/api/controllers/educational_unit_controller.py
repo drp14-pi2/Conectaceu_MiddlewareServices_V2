@@ -13,8 +13,7 @@ from src.api.middleware.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/unit",
-    tags=["EducationalUnit"],
-    dependencies=[Depends(get_current_active_user)]
+    tags=["EducationalUnit"]
 )
 
 def get_educational_unit_service(db: AsyncSession = Depends(get_db)) -> EducationalUnitService:
@@ -47,7 +46,6 @@ async def get_educational_unit(
 async def get_educational_units(
     request: Request,
     active: bool = Query(None),
-    current_user: User = Depends(get_current_active_user),
     service: EducationalUnitService = Depends(get_educational_unit_service)
 ):
     """
@@ -55,10 +53,6 @@ async def get_educational_units(
     - Admin can view any educational units
     - Others: 403
     """
-    # Admin (1) can view any
-    if current_user.user_type_id not in [1]:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
     return await service.list(active)
 
 @router.post("/", response_model=EducationalUnit)
