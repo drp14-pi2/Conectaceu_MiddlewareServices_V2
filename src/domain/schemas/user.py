@@ -75,7 +75,7 @@ class UserList(BaseModel):
     active: Optional[bool] = Field(None)
     educational_units_ids: Optional[list[UUID]] = Field(None)
     page: int = Field(0, min_length=1)
-    page_size: int = Field(0, min_length=1, max_length=100),
+    page_size: int = Field(0, min_length=1, max_length=100)
 
     model_config = ConfigDict(from_attributes=True)
 
