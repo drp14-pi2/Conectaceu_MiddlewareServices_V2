@@ -35,6 +35,9 @@ class LegalRepresentativeService(BaseService):
     async def create_representative(self, dto: LegalRepresentativeCreate) -> LegalRepresentative:
         """Create a new legal representative"""
         try:
+            if not dto.user_id:
+                raise ValueError('Representante precisa estar atrelado a um estudante')
+
             dto.document = re.sub(r'\D', '', dto.document)
             # Check if document already exists for a representative of the same user
             if await self.repository.document_exists_by_user_id(dto.document, dto.user_id):

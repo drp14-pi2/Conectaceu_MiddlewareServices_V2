@@ -15,7 +15,7 @@ class Address(AddressBase):
     id: UUID
     created_at: datetime
     updated_at: Optional[datetime] = None
-    user_id: UUID
+    user_id: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
 

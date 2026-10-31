@@ -1,23 +1,33 @@
 """User service - business logic for User entity"""
 import re
 from typing import Any, List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.application.mappers.document_mapper import DocumentMapper
 from src.application.mappers.user_mapper import UserMapper
 from src.application.services.user_password_history_service import UserPasswordHistoryService
+from src.data.models.document_model import DocumentModel
+from src.data.models.legal_representative_model import LegalRepresentativeModel
 from src.data.models.profiles_to_exclude_model import ProfilesToExcludeModel
 from src.data.models.educational_unit_model import EducationalUnitModel
 from src.data.models.user_model import UserModel
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
+from src.domain.schemas.document import DocumentCreate
+from src.domain.schemas.legal_representative import LegalRepresentativeCreate
 from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
+from src.infrastructure.handlers.format_handler import FormatHandler
 from src.infrastructure.handlers.password_hasher import PasswordHasher
 from src.domain.schemas.user_password_history import PasswordChange
 from src.domain.schemas.address import AddressCreate
+from src.data.models.document_validation_model import DocumentValidationModel
 
 class UserService(BaseService):
     """Service for User business logic"""
@@ -27,13 +37,19 @@ class UserService(BaseService):
         repository: UserRepository,
         password_history_service: UserPasswordHistoryService,
         profiles_to_exclude_repo: ProfilesToExcludeRepository,
-        educational_unit_repo: EducationalUnitRepository
+        educational_unit_repo: EducationalUnitRepository,
+        document_depo: DocumentRepository,
+        representative_repo: LegalRepresentativeRepository,
+        doc_validation_repo: DocumentValidationRepository
     ):
         super().__init__(repository, 'user', mapper_class=UserMapper)
         self.repository = repository
         self.password_history_service = password_history_service
         self.profiles_to_exclude_repo = profiles_to_exclude_repo
         self.educational_unit_repo = educational_unit_repo
+        self.document_repo = document_depo
+        self.representative_repo = representative_repo
+        self.doc_validation_repo = doc_validation_repo
     
     async def create_user(
         self, 
@@ -57,6 +73,13 @@ class UserService(BaseService):
             dto.name = dto.name.title()
             dto.address.street = dto.address.street.title()
             dto.address.neighborhood = dto.address.neighborhood.title()
+
+            if dto.legal_representative_1:
+                dto.legal_representative_1.document = re.sub(r'\D', '', dto.legal_representative_1.document)
+            
+            if dto.legal_representative_2:
+                dto.legal_representative_2.document = re.sub(r'\D', '', dto.legal_representative_2.document)
+
             self._validate_password(dto.password)
             # Hash passwords
             dto.password = PasswordHasher.hash_password(dto.password)
@@ -73,6 +96,9 @@ class UserService(BaseService):
 
                 if existing_user:
                     raise ValueError("E-mail pertence a outra pessoa")
+            
+            if dto.legal_representative_1 and dto.legal_representative_2 and dto.legal_representative_1.document == dto.legal_representative_2.document:
+                raise ValueError("Os representantes legais não podem ser os mesmos")
             
             # Determine creation path
             is_public_creation = created_by_user_id is None
@@ -94,6 +120,12 @@ class UserService(BaseService):
                     raise ValueError("Este usuário não pode criar outros usuários")
                 
                 is_creator_admin_or_secretary = True
+
+            is_minor = (DateTimeHandler.now().date() - dto.birthdate).days < 18 * 365
+
+            # Minors must have legal representative
+            if is_minor and not dto.legal_representative_1:
+                raise ValueError("Menores de idade devem ter pelo menos 1 (um) representante legal")
 
             # Create User
             model: UserModel = UserMapper.create_to_model(dto)
@@ -127,8 +159,74 @@ class UserService(BaseService):
                 user_id=user_id,
                 hashed_password=model.password
             )
+            
+            # Creates uploaded documents
+            async def _create_document(doc_dto: DocumentCreate, user_id: UUID, legal_rep_id: Optional[UUID] = None) -> DocumentModel:
+                if len(doc_dto.base64) <= 0:
+                    raise ValueError('Conteúdo do documento não pode ser vazio')
+                
+                id_document_types = [1, 2, 3]
+
+                if doc_dto.document_type_id in id_document_types and doc_dto.is_front is None:
+                    raise ValueError('Documentos de identidade precisam estar declarados como frente ou verso')
+                
+                doc_model = DocumentMapper.create_to_model(doc_dto)
+                doc_model.user_id = user_id
+
+                if legal_rep_id:
+                    doc_model.legal_representative_id = legal_rep_id
+
+                return await self.document_repo.create(doc_model)
+            
+            created_documents_to_validate = []
+            created_documents_to_validate.append(await _create_document(dto.id_document_front, user_id))
+            created_documents_to_validate.append(await _create_document(dto.id_document_back, user_id))
+            created_documents_to_validate.append(await _create_document(dto.user_photo, user_id))
+            
+            if dto.health_certificate:
+                created_documents_to_validate.append(await _create_document(dto.health_certificate, user_id))
+
+            # Create legal representatives
+            if is_creating_student:
+                async def _create_legal_representative(rep_dto: LegalRepresentativeCreate, student_user_id: UUID):
+                    rep_model = LegalRepresentativeModel(
+                        id=uuid4(),
+                        created_at=DateTimeHandler.now(),
+                        name = rep_dto.name,
+                        document = rep_dto.document,
+                        legal_representative_degree_id = rep_dto.legal_representative_degree_id,
+                        user_id = student_user_id
+                    )
+                    saved_rep = await self.representative_repo.create(rep_model)
+                    representative_id = saved_rep.id
+                    
+                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_front, user_id, representative_id))
+                    created_documents_to_validate.append(await _create_document(rep_dto.id_document_back, user_id, representative_id))
+                    created_documents_to_validate.append(await _create_document(rep_dto.student_registry_authorization, user_id, representative_id))
+                    
+                    return saved_rep
+                
+                if dto.legal_representative_1:
+                    await _create_legal_representative(dto.legal_representative_1, user_id)
+                
+                if dto.legal_representative_2:
+                    await _create_legal_representative(dto.legal_representative_2, user_id)
+            
+            # Create Document Validations
+            if is_creator_admin_or_secretary:
+                await self._auto_approve_documents(created_documents_to_validate)
+            else:
+                await self._create_pending_validations(created_documents_to_validate)
+
             # Create Address
             await self._create_address(dto.address, user_id)
+
+            # Create student card
+            if is_creating_student:
+                student_card = await self._create_student_card(dto, saved_model.id, saved_model.student_sequential)
+                await _create_document(student_card, user_id)
+
+            # saves changes
             await self.repository.session.commit()
 
             return UserMapper.model_to_schema(saved_model)
@@ -354,6 +452,36 @@ class UserService(BaseService):
         saved_model: AddressModel = await address_repo.create(model)
 
         return AddressMapper.model_to_schema(saved_model)
+
+    async def _create_student_card(
+        self,
+        student_dto: UserCreate,
+        student_id: UUID,
+        student_sequential: int
+    ) -> DocumentCreate:
+        card_html = ''
+
+        with open("src/templates/docs/student_card.html", "r", encoding="utf-8") as f:
+            card_html = f.read()
+        
+        card_html = card_html.replace('${studentSequential}', str(student_sequential))
+        card_html = card_html.replace('${name}', student_dto.name)
+        card_html = card_html.replace('${document}', student_dto.document)
+        card_html = card_html.replace('${birthdate}', student_dto.birthdate.strftime("%d/%m/%Y"))
+        card_html = card_html.replace('${studentPhotoBase64}', student_dto.user_photo.base64)
+        card_html = card_html.replace('${userFullAddress}', f'{student_dto.address.street}, {student_dto.address.number} - {student_dto.address.neighborhood}, {FormatHandler.format_zip_code(student_dto.address.zip_code)}')
+        student_phone_number = student_dto.cellphone_number if student_dto.cellphone_number else ''
+        card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
+
+        from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+        return DocumentCreate(
+            base64=PdfRenderService.render_to_base64(card_html),
+            user_id=student_id,
+            document_type_id=8,
+            is_front=None,
+            legal_representative_id=None
+        )
     
     async def _get_new_student_sequential(self) -> int:
         """Get the latest student sequential"""
@@ -361,3 +489,33 @@ class UserService(BaseService):
         new_sequential: int = last_sequential + 1
 
         return new_sequential
+
+    async def _auto_approve_documents(self, documents: list) -> None:
+        """Auto-approve documents for admin/secretary created users"""
+        from uuid import uuid4
+        
+        for doc in documents:
+            validation = DocumentValidationModel(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=2,  # Approved
+                document_id=doc.id
+            )
+            await self.doc_validation_repo.create(validation)
+
+    async def _create_pending_validations(self, documents: list) -> None:
+        """Create pending validations for secretary review"""
+        from uuid import uuid4
+        
+        for doc in documents:
+            validation = DocumentValidationModel(
+                id=uuid4(),
+                created_at=DateTimeHandler.now(),
+                updated_at=None,
+                rejection_reason=None,
+                document_validation_status_type_id=1,  # Pending
+                document_id=doc.id
+            )
+            await self.doc_validation_repo.create(validation)

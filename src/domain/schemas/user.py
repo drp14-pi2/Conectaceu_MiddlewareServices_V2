@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import re
 
 from src.domain.schemas.address import AddressCreate
+from src.domain.schemas.document import DocumentCreate
+from src.domain.schemas.legal_representative import LegalRepresentativeCreate
 
 class UserBase(BaseModel):
     document: str = Field(min_length=11, max_length=11)
@@ -28,8 +30,20 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     user_type_id: int
     password: str = Field(min_length=8, max_length=128)
-    address: AddressCreate
     educational_unit_id: UUID
+    
+    # Uploaded documents
+    id_document_front: DocumentCreate
+    id_document_back: DocumentCreate
+    user_photo: DocumentCreate
+    health_certificate: Optional[DocumentCreate] = Field(None)
+
+    # Address
+    address: AddressCreate
+
+    # Legal representatives
+    legal_representative_1: Optional[LegalRepresentativeCreate] = Field(None)
+    legal_representative_2: Optional[LegalRepresentativeCreate] = Field(None)
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=3, max_length=200)

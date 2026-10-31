@@ -59,21 +59,19 @@ def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
 async def create_representative(
     request: Request,
     dto: LegalRepresentativeCreate,
-    # TODO: remove commentary when user creation fixed
-    # current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
     service: LegalRepresentativeService = Depends(get_representative_service),
     security_service: SecurityService = Depends(get_security_service)
 ):
     """Create a new legal representative. Admin (1), Secretary (2) and Student (5) only."""
-    # TODO: remove commentary when user creation fixed
-    # if not await security_service.can_access_other_user(current_user.id, dto.user_id):
-    #     raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    if not await security_service.can_access_other_user(current_user.id, dto.user_id):
+        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    # if current_user.user_type_id not in [1, 2, 5]:
-    #     raise HTTPException(status_code=403, detail="Não autorizado")
+    if current_user.user_type_id not in [1, 2, 5]:
+        raise HTTPException(status_code=403, detail="Não autorizado")
 
-    # if (current_user.user_type_id == 5 and current_user.id != dto.user_id):
-    #     raise HTTPException(status_code=403, detail="Só pode criar representantes para si")
+    if (current_user.user_type_id == 5 and current_user.id != dto.user_id):
+        raise HTTPException(status_code=403, detail="Só pode criar representantes para si")
     
     try:
         return await service.create_representative(dto)

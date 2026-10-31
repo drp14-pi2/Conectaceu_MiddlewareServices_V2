@@ -5,6 +5,8 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import re
 
+from src.domain.schemas.document import DocumentCreate
+
 class LegalRepresentativeBase(BaseModel):
     name: str = Field(min_length=3, max_length=200)
     document: str = Field(min_length=11, max_length=11)
@@ -18,7 +20,12 @@ class LegalRepresentativeBase(BaseModel):
         return cpf
 
 class LegalRepresentativeCreate(LegalRepresentativeBase):
-    user_id: UUID
+    user_id: Optional[UUID] = None
+
+    # Documents
+    id_document_front: DocumentCreate
+    id_document_back: DocumentCreate
+    student_registry_authorization: DocumentCreate
 
 class LegalRepresentative(LegalRepresentativeBase):
     id: UUID

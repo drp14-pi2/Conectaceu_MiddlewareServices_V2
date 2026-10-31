@@ -13,6 +13,7 @@ from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
@@ -40,12 +41,18 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     password_history_service = UserPasswordHistoryService(password_history_repo)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
     educational_unit_repo = EducationalUnitRepository(db)
+    document_depo = DocumentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+    doc_validation_repo = DocumentValidationRepository(db)
 
     return UserService(
         user_repo,
         password_history_service,
         profiles_to_exclude_repo,
-        educational_unit_repo
+        educational_unit_repo,
+        document_depo,
+        representative_repo,
+        doc_validation_repo
     )
 
 def get_email_validation_service(db: AsyncSession = Depends(get_db)) -> EmailValidationService:
