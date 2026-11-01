@@ -84,7 +84,7 @@ class UserList(BaseModel):
     name: Optional[str] = Field(None)
     document: Optional[str] = Field(None)
     email: Optional[str] = Field(None)
-    phoneNumber: Optional[str] = Field(None)
+    phone_number: Optional[str] = Field(None)
     user_type_id: Optional[int] = Field(None)
     active: Optional[bool] = Field(None)
     educational_units_ids: Optional[list[UUID]] = Field(None)

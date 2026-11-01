@@ -210,7 +210,7 @@ async def list_users(
             name=dto.name,
             document=dto.document,
             email=dto.email,
-            phoneNumber=dto.phoneNumber,
+            phone_number=dto.phone_number,
             user_type_id=dto.user_type_id,
             active=dto.active,
             educational_units_ids=dto.educational_units_ids,
@@ -224,7 +224,7 @@ async def list_users(
             name=dto.name,
             document=dto.document,
             email=dto.email,
-            phoneNumber=dto.phoneNumber,
+            phone_number=dto.phone_number,
             user_type_id=5, # Students only
             active=dto.active,
             page=dto.page,
