@@ -1,5 +1,5 @@
 """Reference data controller for lookup tables"""
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.mappers.reference_mapper import ReferenceMapper
@@ -60,6 +60,10 @@ async def get_user_types(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all user types"""
+    # Student can't list
+    if current_user.user_type_id == 5:
+        raise HTTPException(status_code=403, detail='Não autorizado')
+    
     repo = UserTypeRepository(db)
     models = await repo.get_all()
     result = [ReferenceMapper.user_type_model_to_schema(m) for m in models]
