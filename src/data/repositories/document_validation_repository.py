@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import and_, select
 
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_validation_model import DocumentValidationModel
@@ -55,6 +55,22 @@ class DocumentValidationRepository(BaseRepository):
             .join(UserModel, DocumentModel.user_id == UserModel.id)
             .where(conditions)
         ).offset(skip).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_user_pending_validations(self, user_id: UUID) -> List[DocumentValidationModel]:
+        """Get all validations for documents that belong to a user"""
+        stmt = (
+            select(DocumentValidationModel)
+            .join(DocumentModel, DocumentValidationModel.document_id == DocumentModel.id)
+            .join(UserModel, DocumentModel.user_id == UserModel.id)
+            .where(
+                and_(
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                    UserModel.id == user_id
+                )
+            )
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
