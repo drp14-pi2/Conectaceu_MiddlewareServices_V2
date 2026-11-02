@@ -354,9 +354,9 @@ class UserService(BaseService):
             if user.active:
                 raise ValueError("Usuário já ativo")
 
-            pending_validations: int = await self.doc_validation_repo.get_user_pending_validations(user.id)
+            pending_validations: list[DocumentValidationModel] = await self.doc_validation_repo.get_user_pending_validations(user.id)
 
-            if pending_validations > 0:
+            if len(pending_validations) > 0:
                 raise ValueError('Usuário ainda tem validações de documentação pendentes')
             
             success: bool = await self.repository.activate(user_id)
