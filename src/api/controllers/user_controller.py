@@ -214,6 +214,7 @@ async def list_users(
             user_type_id=dto.user_type_id,
             active=dto.active,
             educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
             page=dto.page,
             page_size=dto.page_size
         )
@@ -227,6 +228,8 @@ async def list_users(
             phone_number=dto.phone_number,
             user_type_id=5, # Students only
             active=dto.active,
+            educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
             page=dto.page,
             page_size=dto.page_size
         )

@@ -388,6 +388,7 @@ class UserService(BaseService):
         user_type_id: Optional[int] = None,
         active: Optional[bool] = None,
         educational_units_ids: Optional[list[UUID]] = None,
+        has_pending_validations: Optional[bool] = None,
         page: int = 1,
         page_size: int = 10,
     ) -> UserListResponse:
@@ -400,7 +401,8 @@ class UserService(BaseService):
                 phone_number=phone_number,
                 user_type_id=user_type_id,
                 active=active,
-                educational_units_ids=educational_units_ids
+                educational_units_ids=educational_units_ids,
+                has_pending_validations=has_pending_validations
             )
             skip: int = (page - 1) * page_size
             models: List[UserModel] = await self.repository.find_by_filters(
@@ -411,6 +413,7 @@ class UserService(BaseService):
                 user_type_id=user_type_id,
                 active=active,
                 educational_units_ids=educational_units_ids,
+                has_pending_validations=has_pending_validations,
                 skip=skip,
                 limit=page_size
             )

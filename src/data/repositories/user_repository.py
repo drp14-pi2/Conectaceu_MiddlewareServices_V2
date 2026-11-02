@@ -2,8 +2,10 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select, and_
+from sqlalchemy import exists, func, select, and_
 
+from src.data.models.document_model import DocumentModel
+from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.base.base_repository import BaseRepository
 
@@ -47,6 +49,7 @@ class UserRepository(BaseRepository[UserModel]):
         active: Optional[bool] = None,
         educational_units_ids: Optional[list[UUID]] = None,
         email_verified: Optional[bool] = None,
+        has_pending_validations: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[UserModel]:
@@ -73,6 +76,19 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
         if email_verified is not None:
             conditions.append(UserModel.email_verified == email_verified)
+        if has_pending_validations is not None:
+            pending_exists = (
+                select(1)
+                .select_from(DocumentModel)
+                .join(DocumentValidationModel, DocumentValidationModel.document_id == DocumentModel.id)
+                .where(
+                    DocumentModel.user_id == UserModel.id,
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                )
+                .correlate(UserModel)
+                .exists()
+            )
+            conditions.append(pending_exists)
         
         stmt = select(UserModel)
         if conditions:
@@ -93,7 +109,8 @@ class UserRepository(BaseRepository[UserModel]):
         gender_id: Optional[int] = None,
         active: Optional[bool] = None,
         educational_units_ids: Optional[list[UUID]] = None,
-        email_verified: Optional[bool] = None
+        email_verified: Optional[bool] = None,
+        has_pending_validations: Optional[bool] = None
     ) -> List[UserModel]:
         """Find users with multiple filters"""
         conditions = [UserModel.user_type_id != 1] # Never include administrators
@@ -118,6 +135,19 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
         if email_verified is not None:
             conditions.append(UserModel.email_verified == email_verified)
+        if has_pending_validations is not None:
+            pending_exists = (
+                select(1)
+                .select_from(DocumentModel)
+                .join(DocumentValidationModel, DocumentValidationModel.document_id == DocumentModel.id)
+                .where(
+                    DocumentModel.user_id == UserModel.id,
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                )
+                .correlate(UserModel)
+                .exists()
+            )
+            conditions.append(pending_exists)
         
         stmt = select(func.count()).select_from(UserModel)
         if conditions:
