@@ -36,7 +36,7 @@ async def get_educational_unit(
     - Others: 403
     """
     # Admin (1) can view any
-    if current_user.user_type_id not in [1]:
+    if current_user.user_type_id not in [1] and current_user.educational_unit_id != id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     return await service.get_by_id(id)
