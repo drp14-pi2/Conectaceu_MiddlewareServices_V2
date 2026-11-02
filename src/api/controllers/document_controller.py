@@ -162,14 +162,14 @@ async def get_document_by_type(
 
 @router.get("/user/{user_id}/identity/type", response_model=list[Document])
 @limiter.limit("20/minute")
-async def get_user_identity_document_type(
+async def get_user_identity_document(
     request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service),
     security_service: SecurityService = Depends(get_security_service)
 ):
-    """Get document by type."""
+    """Get user identity document."""
     try:
         if not await security_service.can_access_other_user(current_user.id, user_id):
             raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
