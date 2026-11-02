@@ -185,7 +185,7 @@ async def activate_user(
 
 
 @router.post("/list", response_model=UserListResponse)
-@limiter.limit("20/minute")
+@limiter.limit("50/minute")
 async def list_users(
     request: Request,
     dto: UserListRequest,
