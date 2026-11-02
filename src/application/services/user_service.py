@@ -21,7 +21,7 @@ from src.data.repositories.user_repository import UserRepository
 from src.application.services.base_service import BaseService
 from src.domain.schemas.document import DocumentCreate
 from src.domain.schemas.legal_representative import LegalRepresentativeCreate
-from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserUpdate
+from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserListResponse, UserUpdate
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.handlers.format_handler import FormatHandler
 from src.infrastructure.handlers.password_hasher import PasswordHasher
@@ -390,9 +390,18 @@ class UserService(BaseService):
         educational_units_ids: Optional[list[UUID]] = None,
         page: int = 1,
         page_size: int = 10,
-    ) -> List[User]:
+    ) -> UserListResponse:
         """Find users with filters and pagination"""
         try:
+            total: int = await self.repository.count_by_filters(
+                name=name,
+                document=document,
+                email=email,
+                phone_number=phone_number,
+                user_type_id=user_type_id,
+                active=active,
+                educational_units_ids=educational_units_ids
+            )
             skip: int = (page - 1) * page_size
             models: List[UserModel] = await self.repository.find_by_filters(
                 name=name,
@@ -406,7 +415,10 @@ class UserService(BaseService):
                 limit=page_size
             )
             
-            return [UserMapper.model_to_schema(model) for model in models]
+            return UserListResponse(
+                total=total,
+                users=[UserMapper.model_to_schema(model) for model in models]
+            )
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 

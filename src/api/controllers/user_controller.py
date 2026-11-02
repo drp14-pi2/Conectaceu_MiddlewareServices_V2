@@ -23,7 +23,7 @@ from src.data.repositories.email_validation_repository import EmailValidationRep
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserList, UserUpdate
+from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserListRequest, UserListResponse, UserUpdate
 from src.domain.schemas.user_password_history import PasswordChange
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.api.middleware.rate_limiter import limiter
@@ -184,11 +184,11 @@ async def activate_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/list", response_model=List[User])
+@router.post("/list", response_model=UserListResponse)
 @limiter.limit("20/minute")
 async def list_users(
     request: Request,
-    dto: UserList,
+    dto: UserListRequest,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service),
     security_service: SecurityService = Depends(get_security_service)

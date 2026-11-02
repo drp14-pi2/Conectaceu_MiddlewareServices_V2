@@ -80,7 +80,7 @@ class User(UserBase):
     def is_over_70(self) -> bool:
         return self.age > 70
 
-class UserList(BaseModel):
+class UserListRequest(BaseModel):
     name: Optional[str] = Field(None)
     document: Optional[str] = Field(None)
     email: Optional[str] = Field(None)
@@ -92,6 +92,10 @@ class UserList(BaseModel):
     page_size: int = Field(0, min=1, max=100)
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserListResponse(BaseModel):
+    total: int = Field(0)
+    users: list[User] = Field(default_factory=list)
 
 class UserDetail(User):
     """User with additional data for student listing"""
