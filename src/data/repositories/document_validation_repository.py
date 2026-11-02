@@ -37,24 +37,18 @@ class DocumentValidationRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_pending_validations(
-        self,
-        educational_unit_id: Optional[UUID] = None,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[DocumentValidationModel]:
+    async def get_pending_validations(self, user_id: UUID) -> List[DocumentValidationModel]:
         """Get all validations for documents that belong to a user"""
-        conditions = [DocumentValidationModel.document_validation_status_type_id == 1]
-
-        if educational_unit_id:
-            conditions.append(UserModel.educational_unit_id == educational_unit_id)
-
         stmt = (
             select(DocumentValidationModel)
             .join(DocumentModel, DocumentValidationModel.document_id == DocumentModel.id)
-            .join(UserModel, DocumentModel.user_id == UserModel.id)
-            .where(conditions)
-        ).offset(skip).limit(limit)
+            .where(
+                and_(
+                    DocumentModel.user_id == user_id,
+                    DocumentValidationModel.document_validation_status_type_id == 1
+                )
+            )
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

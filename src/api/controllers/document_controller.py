@@ -238,17 +238,17 @@ async def validate_document(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/validate/pending", response_model=list[DocumentValidation])
+@router.get("/validate/user/{user_id}/pending", response_model=list[DocumentValidation])
 @limiter.limit("20/minute")
 async def get_pending_validations(
     request: Request,
-    skip: int = 0,
-    limit: int = 100,
+    user_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    service: DocumentValidationService = Depends(get_validation_service)
+    service: DocumentValidationService = Depends(get_validation_service),
+    security_service: SecurityService = Depends(get_security_service)
 ):
     """Get pending document validations."""
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2] and not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    return await service.get_pending_validations(current_user.educational_unit_id, skip, limit)
+    return await service.get_pending_validations(user_id)
