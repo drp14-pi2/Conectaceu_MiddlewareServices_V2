@@ -2,7 +2,7 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import func, select, and_
 
 from src.data.models.user_model import UserModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -81,6 +81,50 @@ class UserRepository(BaseRepository[UserModel]):
         
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+    
+    async def count_by_filters(
+        self,
+        name: Optional[str] = None,
+        document: Optional[str] = None,
+        email: Optional[str] = None,
+        phone_number: Optional[str] = None,
+        user_type_id: Optional[int] = None,
+        sex_id: Optional[int] = None,
+        gender_id: Optional[int] = None,
+        active: Optional[bool] = None,
+        educational_units_ids: Optional[list[UUID]] = None,
+        email_verified: Optional[bool] = None
+    ) -> List[UserModel]:
+        """Find users with multiple filters"""
+        conditions = [UserModel.user_type_id != 1] # Never include administrators
+        
+        if name:
+            conditions.append(UserModel.name.contains(name))
+        if document:
+            conditions.append(UserModel.document == document)
+        if email:
+            conditions.append(UserModel.email == email)
+        if phone_number:
+            conditions.append(UserModel.cellphone_number == phone_number)
+        if user_type_id:
+            conditions.append(UserModel.user_type_id == user_type_id)
+        if sex_id:
+            conditions.append(UserModel.sex_id == sex_id)
+        if gender_id:
+            conditions.append(UserModel.gender_id == gender_id)
+        if active is not None:
+            conditions.append(UserModel.active == active)
+        if educational_units_ids:
+            conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
+        if email_verified is not None:
+            conditions.append(UserModel.email_verified == email_verified)
+        
+        stmt = select(func.count()).select_from(UserModel)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        
+        result = await self.session.execute(stmt)
+        return result.scalar()
     
     async def deactivate(self, user_id: UUID) -> bool:
         """Soft delete - deactivate user"""
