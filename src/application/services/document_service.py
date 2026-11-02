@@ -72,7 +72,7 @@ class DocumentService(BaseService):
                 if is_user_photo:
                     existing_student_card: DocumentModel = (await self.repository.get_by_type(
                         user.id,
-                        STUDENT_PHOTO_DOC_TYPE_ID
+                        [STUDENT_PHOTO_DOC_TYPE_ID]
                     ))[0]
                     existing_student_card.base64 = await self._get_student_card_base64(user, dto.base64)
                     await self.repository.update(existing_student_card)
@@ -162,7 +162,7 @@ class DocumentService(BaseService):
             ):
                 raise ValueError(f"Quantidade de pedidos de documentos excedida. Tente novamente depois de {document_requests_timeout_minutes} minutos")
 
-            models = await self.repository.get_by_type(user_id, document_type_id)
+            models = await self.repository.get_by_type(user_id, [document_type_id])
 
             if not models or len(models) <= 0:
                 raise ValueError("Nenhum documento encontrado")
@@ -181,6 +181,22 @@ class DocumentService(BaseService):
             await self.repository.session.commit()
 
             return [DocumentMapper.model_to_schema(model) for model in models]
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+
+    async def get_user_identity_document(self, user_id: UUID) -> list[Document]:
+        try:
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user:
+                raise ValueError('Usuário não encontrado')
+
+            documents: list[DocumentModel] = await self.repository.get_by_type(user.id, [1, 2, 3])
+
+            if not documents:
+                raise ValueError('Documento não encontrado')
+
+            return [DocumentMapper.model_to_schema(document) for document in documents]
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 

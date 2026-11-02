@@ -160,6 +160,32 @@ async def get_document_by_type(
     
     return documents
 
+@router.get("/user/{user_id}/identity/type", response_model=list[Document])
+@limiter.limit("20/minute")
+async def get_user_identity_document_type(
+    request: Request,
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: DocumentService = Depends(get_document_service),
+    security_service: SecurityService = Depends(get_security_service)
+):
+    """Get document by type."""
+    try:
+        if not await security_service.can_access_other_user(current_user.id, user_id):
+            raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+        
+        documents: list[Document] = await service.get_user_identity_document(user_id)
+
+        if not documents:
+            raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
+        
+        if current_user.user_type_id not in [1, 2] and user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
+        
+        return documents
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.get("/management/type/{document_type_id}", response_model=dict)
 @limiter.limit("20/minute")
 async def get_management_document_template(
