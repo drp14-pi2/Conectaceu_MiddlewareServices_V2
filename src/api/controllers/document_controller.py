@@ -112,7 +112,7 @@ async def get_user_documents(
     return await service.get_user_documents(user_id)
 
 @router.get("/{document_id}", response_model=Document)
-@limiter.limit("20/minute")
+@limiter.limit("50/minute")
 async def get_document(
     request: Request,
     document_id: UUID,
