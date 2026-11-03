@@ -16,9 +16,12 @@ class DocumentValidationRepository(BaseRepository):
         super().__init__(session, DocumentValidationModel)
     
     async def get_by_document_id(self, document_id: UUID) -> Optional[DocumentValidationModel]:
-        """Get validation by document ID"""
-        stmt = select(DocumentValidationModel).where(
-            DocumentValidationModel.document_id == document_id
+        """Get the most recent validation for a document"""
+        stmt = (
+            select(DocumentValidationModel)
+            .where(DocumentValidationModel.document_id == document_id)
+            .order_by(DocumentValidationModel.created_at.desc())
+            .limit(1)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

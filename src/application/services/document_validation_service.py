@@ -6,6 +6,7 @@ from src.application.logging.application_logger import ApplicationLogger
 from src.application.mappers.document_validation_mapper import DocumentValidationMapper
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_validation_model import DocumentValidationModel
+from src.data.models.user_model import UserModel
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
@@ -46,15 +47,16 @@ class DocumentValidationService(BaseService):
             document_uuid: UUID = dto.document_id
             # Try to find existing validation
             existing_model: DocumentValidationModel | None = await self.repository.get_by_document_id(document_uuid)
+            saved_model: DocumentValidationModel | None = None
             
             if existing_model:
+                if existing_model.document_validation_status_type_id == dto.document_validation_status_type_id:
+                    raise ValueError('Documento já tem este status')
+
                 # Update existing validation
-                updated_model: DocumentValidationModel = DocumentValidationModel(
-                    document_id=existing_model.document_id,
-                    document_validation_status_type_id=dto.document_validation_status_type_id,
-                    rejection_reason=dto.rejection_reason
-                )
-                saved_model: DocumentModel = await self.repository.update(updated_model)
+                existing_model.document_validation_status_type_id = dto.document_validation_status_type_id
+                existing_model.rejection_reason = dto.rejection_reason
+                saved_model = await self.repository.update(existing_model)
             else:
                 # Create new validation
                 create_dto: DocumentValidationInput = DocumentValidationInput(
@@ -72,6 +74,9 @@ class DocumentValidationService(BaseService):
 
             # If approved, check if user can be activated
             await self._check_user_activation(dto, document_uuid)
+
+            if not saved_model:
+                raise ValueError('Erro ao salvar validação')
 
             return DocumentValidationMapper.model_to_schema(saved_model)
         except Exception as e:
@@ -112,12 +117,11 @@ class DocumentValidationService(BaseService):
         if dto.document_validation_status_type_id == 2:
             from src.data.repositories.user_repository import UserRepository
 
-            user_repo = UserRepository(self.repository.session)
             document: DocumentModel | None = await self.doc_repo.get_by_id(document_uuid)
 
             if document:
-                user_uuid: UUID = document.user_id
-                documents: List[DocumentModel] = await self.doc_repo.get_by_user_id(user_uuid)
+                user_id: UUID = document.user_id
+                documents: List[DocumentModel] = await self.doc_repo.get_by_user_id(user_id)
                 # Check if all documents have been approved
                 all_approved: bool = True
 
@@ -128,15 +132,18 @@ class DocumentValidationService(BaseService):
                     if not doc_validation or doc_validation.document_validation_status_type_id != 2:
                         all_approved = False
                         break
+                
+                user_repo = UserRepository(self.repository.session)
+                user: UserModel | None = await user_repo.get_by_id(user_id)
 
                 # Check user age. If minor, check legal representative count
-                is_minor: bool = (DateTimeHandler.now().date() - dto.birthdate).days < (18 * 365)
+                is_minor: bool = (DateTimeHandler.now().date() - user.birthdate.date()).days < (18 * 365)
 
                 if is_minor:
-                    representative_count = len(await self.representative_repo.get_by_user_id(user_uuid))
+                    representative_count = len(await self.representative_repo.get_by_user_id(user_id))
                     if representative_count <= 0:
                         all_approved = False
                 
                 if all_approved:
-                    await user_repo.activate(user_uuid)
+                    await user_repo.activate(user_id)
                     await self.repository.session.commit()
