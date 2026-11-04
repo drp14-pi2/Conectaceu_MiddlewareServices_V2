@@ -53,6 +53,7 @@ class UserUpdate(BaseModel):
     school: Optional[str] = Field(None, max_length=200)
     sex_id: Optional[int] = None
     gender_id: Optional[int] = None
+    educational_unit_id: Optional[UUID] = None
 
 class User(UserBase):
     id: UUID
