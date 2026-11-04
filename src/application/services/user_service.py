@@ -131,7 +131,7 @@ class UserService(BaseService):
             model: UserModel = UserMapper.create_to_model(dto)
             is_creating_student = model.user_type_id == 5
 
-            if model.email != '' and not is_creator_admin_or_secretary:
+            if model.email:
                 model.email_verified = False
 
             if is_creating_student:
