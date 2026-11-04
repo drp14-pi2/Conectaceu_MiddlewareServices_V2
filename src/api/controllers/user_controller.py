@@ -204,8 +204,25 @@ async def list_users(
         elif any(unit_id != current_user.educational_unit_id for unit_id in dto.educational_units_ids):
             raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    # Admins and Secretaries can list all users
-    if current_user.user_type_id in [1, 2]:
+    # Admins, Secretaries and Managers can list all users
+    if current_user.user_type_id in [1, 2, 6]:
+        return await service.find_users(
+            name=dto.name,
+            document=dto.document,
+            email=dto.email,
+            phone_number=dto.phone_number,
+            user_type_id=dto.user_type_id,
+            active=dto.active,
+            educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
+            page=dto.page,
+            page_size=dto.page_size
+        )
+    
+    if current_user.user_type_id == 3:
+        if dto.user_type_id not in [4, 5]:
+            raise HTTPException(status_code=403, detail='Coordenadores só podem listar educadores e estudantes')
+
         return await service.find_users(
             name=dto.name,
             document=dto.document,
@@ -220,13 +237,16 @@ async def list_users(
         )
     
     # Coordinators and Educators can only list students
-    if current_user.user_type_id in [3, 4]:
+    if current_user.user_type_id == 4:
+        if dto.user_type_id != 5:
+            raise HTTPException(status_code=403, detail='Educadores só podem listar estudantes')
+        
         return await service.find_users(
             name=dto.name,
             document=dto.document,
             email=dto.email,
             phone_number=dto.phone_number,
-            user_type_id=5, # Students only
+            user_type_id=dto.user_type_id,
             active=dto.active,
             educational_units_ids=dto.educational_units_ids,
             has_pending_validations=dto.has_pending_validations,
