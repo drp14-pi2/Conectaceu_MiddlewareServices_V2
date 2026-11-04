@@ -9,7 +9,7 @@ class CourseComponentBase(BaseModel):
     description: str = Field(min_length=10, max_length=500)
 
 class CourseComponentCreate(CourseComponentBase):
-    course_id: UUID
+    course_id: Optional[UUID] = None
 
 class CourseComponent(CourseComponentBase):
     id: UUID

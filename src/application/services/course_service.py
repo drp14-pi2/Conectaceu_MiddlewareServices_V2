@@ -3,15 +3,19 @@ from typing import Any, List, Optional
 from uuid import UUID
 
 from src.application.logging.application_logger import ApplicationLogger
+from src.application.mappers.course_component_mapper import CourseComponentMapper
 from src.data.models.course_component_model import CourseComponentModel
 from src.data.models.course_model import CourseModel
 from src.data.models.educational_unit_model import EducationalUnitModel
+from src.data.models.user_model import UserModel
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.application.services.base_service import BaseService
 from src.application.mappers.course_mapper import CourseMapper
+from src.data.repositories.user_repository import UserRepository
 from src.domain.schemas.course import Course, CourseCreate, CourseList, CourseUpdate
+from src.domain.schemas.course_component import CourseComponent
 
 class CourseService(BaseService):
     """Service for Course business logic"""
@@ -20,12 +24,14 @@ class CourseService(BaseService):
         self, 
         repository: CourseRepository,
         component_repo: CourseComponentRepository,
-        educational_unit_repo: EducationalUnitRepository
+        educational_unit_repo: EducationalUnitRepository,
+        user_repo: UserRepository
     ):
         super().__init__(repository, 'course', mapper_class=CourseMapper)
         self.repository = repository
         self.component_repo = component_repo
         self.educational_unit_repo = educational_unit_repo
+        self.user_repo = user_repo
     
     async def create_course(
         self, 
@@ -34,12 +40,22 @@ class CourseService(BaseService):
         user_ip_address: Optional[str] = None
     ) -> Course:
         """Create a new course"""
+        """Accepts components"""
         try:
             # Check if name already exists
             existing_course: CourseModel | None = await self.repository.get_by_name(dto.name)
 
             if existing_course:
                 raise ValueError("Nome de curso já existe")
+
+            # Validate components count (up to 30)
+            if len(dto.components) > 30:
+                raise ValueError("Curso não pode ter mais que 30 (trinta) componentes")
+            
+            # Validate component names are unique within the course
+            component_names = [c.name for c in dto.components]
+            if len(component_names) != len(set(component_names)):
+                raise ValueError("Nomes de componentes devem ser únicos dentro de um mesmo curso")
             
             # Validate workload
             if dto.workload < 1:
@@ -61,9 +77,35 @@ class CourseService(BaseService):
 
             if not educational_unit:
                 raise ValueError('Polo não encontrado')
+
+            educator_1: UserModel | None = await self.user_repo.get_by_id(dto.responsible_educator_1)
+
+            if not educator_1 or educator_1.user_type_id != 4:
+                raise ValueError('Educador 1 inválido')
+
+            if dto.responsible_educator_2:
+                educator_2: UserModel | None = await self.user_repo.get_by_id(dto.responsible_educator_2)
+
+                if not educator_2 or educator_2.user_type_id != 4:
+                    raise ValueError('Educador 2 inválido')
+
+                if educator_1.id == educator_2.id:
+                    raise ValueError('Educadores não podem ser iguais')
             
             model: CourseModel = CourseMapper.create_to_model(dto)
             saved_model: CourseModel = await self.repository.create(model)
+            course_id = saved_model.id
+            
+            # Create components
+            saved_components: list[CourseComponent] = []
+
+            if dto.components:
+                for component_create in dto.components:
+                    component_create.course_id = course_id
+                    component_model = CourseComponentMapper.create_to_model(component_create)
+                    component_model.active = True
+                    saved_component_model = await self.component_repo.create(component_model)
+                    saved_components.append(CourseComponentMapper.model_to_schema(saved_component_model))
 
             if created_by_user_id:
                 from src.data.repositories.log_course_creation_repository import LogCourseCreationRepository
@@ -80,7 +122,7 @@ class CourseService(BaseService):
             
             await self.repository.session.commit()
 
-            return CourseMapper.model_to_schema(saved_model)
+            return CourseMapper.view_with_components(model=saved_model, components=saved_components)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     

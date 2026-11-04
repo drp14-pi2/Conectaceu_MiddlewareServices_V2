@@ -27,6 +27,9 @@ class CourseComponentService(BaseService):
         """Create a new course component"""
         try:
             # Validate course
+            if not dto.course_id:
+                raise ValueError('ID do curso inválido')
+
             course: CourseModel | None = await self.course_repo.get_by_id(dto.course_id)
 
             if not course:
