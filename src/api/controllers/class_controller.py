@@ -119,7 +119,7 @@ async def activate_class(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/", response_model=List[Class])
+@router.post("/list", response_model=List[Class])
 @limiter.limit("20/minute")
 async def list_classes(
     request: Request,
