@@ -19,7 +19,7 @@ from src.data.db_context.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.middleware.rate_limiter import limiter
 
-from src.domain.schemas.auth import Login
+from src.domain.schemas.auth import Login, RefreshToken
 from src.domain.schemas.user import User, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -80,11 +80,11 @@ async def login(
 @limiter.limit("5/minute")
 async def refresh_token(
     request: Request,
-    refresh_token: str,
+    dto: RefreshToken,
     service: AuthService = Depends(get_auth_service)
 ):
     """Refresh access token"""
-    result: dict[str, Any] | None = await service.refresh_access_token(refresh_token)
+    result: dict[str, Any] | None = await service.refresh_access_token(dto.refresh_token)
     
     if not result:
         raise HTTPException(
