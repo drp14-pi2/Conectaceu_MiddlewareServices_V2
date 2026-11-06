@@ -129,20 +129,24 @@ class DocumentValidationService(BaseService):
                     doc_uuid: UUID = doc.id
                     doc_validation: DocumentValidationModel | None = await self.repository.get_by_document_id(doc_uuid)
 
-                    if not doc_validation or doc_validation.document_validation_status_type_id != 2:
+                    if not doc_validation:
+                        continue
+
+                    if doc_validation.document_validation_status_type_id != 2:
                         all_approved = False
                         break
                 
                 user_repo = UserRepository(self.repository.session)
                 user: UserModel | None = await user_repo.get_by_id(user_id)
 
-                # Check user age. If minor, check legal representative count
-                is_minor: bool = (DateTimeHandler.now().date() - user.birthdate.date()).days < (18 * 365)
+                if user.user_type_id == 5:
+                    # Check student age. If minor, check legal representative count
+                    is_minor: bool = (DateTimeHandler.now().date() - user.birthdate.date()).days < (18 * 365)
 
-                if is_minor:
-                    representative_count = len(await self.representative_repo.get_by_user_id(user_id))
-                    if representative_count <= 0:
-                        all_approved = False
+                    if is_minor:
+                        representative_count = len(await self.representative_repo.get_by_user_id(user_id))
+                        if representative_count <= 0:
+                            all_approved = False
                 
                 if all_approved:
                     await user_repo.activate(user_id)
