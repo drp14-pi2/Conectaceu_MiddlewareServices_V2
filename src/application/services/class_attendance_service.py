@@ -77,7 +77,7 @@ class ClassAttendanceService(BaseService):
             existing_attendance: ClassAttendanceModel | None  = await self.repository.get_by_user_and_class(user_id, class_id)
             
             if existing_attendance:
-                existing_attendance.attended = entry.attended
+                existing_attendance.attended = entry.attendance_type
                 await self.repository.update(existing_attendance)
                 updated += 1
             else:
@@ -85,7 +85,7 @@ class ClassAttendanceService(BaseService):
                     id=uuid4(),
                     created_at=DateTimeHandler.now(),
                     updated_at=None,
-                    attended=entry.attended,
+                    attended=entry.attendance_type,
                     user_id=user_id,
                     class_id=class_id
                 )

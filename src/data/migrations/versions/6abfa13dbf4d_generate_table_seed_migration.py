@@ -98,6 +98,16 @@ def upgrade() -> None:
         [{'id': 1, 'description': 'Alunos matriculados por curso'}, {'id': 2, 'description': 'Vagas por curso'}]
     )
 
+    # ========== class_attendance_type ==========
+    op.bulk_insert(
+        sa.table('class_attendance_type', sa.column('id', sa.Integer), sa.column('description', sa.String)),
+        [
+            {'id': 1, 'description': 'Presente'},
+            {'id': 2, 'description': 'Em outro grupo'},
+            {'id': 2, 'description': 'Falta'}
+        ]
+    )
+
 
 def downgrade() -> None:
     """Downgrade schema."""

@@ -39,6 +39,7 @@ from src.data.models.student_absence_justification_model import StudentAbsenceJu
 from src.data.models.enrollment_waiting_list_model import EnrollmentWaitingListModel
 from src.data.models.email_validation_model import EmailValidationModel
 from src.data.models.educational_unit_model import EducationalUnitModel
+from src.data.models.class_attendance_type_model import ClassAttendanceTypeModel
 
 # Log models
 from src.data.models.log_access_model import LogAccessModel

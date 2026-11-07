@@ -27,6 +27,7 @@ from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.repositories.enrollment_waiting_list_repository import EnrollmentWaitingListRepository
 from src.data.repositories.email_validation_repository import EmailValidationRepository
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
+from src.data.repositories.class_attendance_type_repository import ClassAttendanceTypeRepository
 
 # Log repositories
 from src.data.repositories.log_access_repository import LogAccessRepository
@@ -75,6 +76,7 @@ class DatabaseContext:
         self.enrollment_waiting_list = EnrollmentWaitingListRepository(self.session)
         self.email_validation_repository = EmailValidationRepository(self.session)
         self.educational_unit_repository = EducationalUnitRepository(self.session)
+        self.educational_unit_repository = ClassAttendanceTypeRepository(self.session)
         
         # Log repositories
         self.log_accesses = LogAccessRepository(self.session)
