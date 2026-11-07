@@ -272,13 +272,25 @@ async def get_user(
     """
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+    
+    if current_user.user_type_id == 5 and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Não autorizado")
 
     user: User | None = await service.get_by_id(user_id)
 
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id == 6 and user.user_type_id == 1:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if current_user.user_type_id == 2 and user.user_type_id in [1, 6]:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if current_user.user_type_id == 3 and user.user_type_id in [1, 2, 6]:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if current_user.user_type_id == 4 and user.user_type_id in [1, 2, 3, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     return user
