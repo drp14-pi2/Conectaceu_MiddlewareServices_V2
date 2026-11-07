@@ -215,6 +215,7 @@ async def list_users(
             active=dto.active,
             educational_units_ids=dto.educational_units_ids,
             has_pending_validations=dto.has_pending_validations,
+            user_ids=dto.user_ids,
             page=dto.page,
             page_size=dto.page_size
         )

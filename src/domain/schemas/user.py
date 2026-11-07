@@ -90,6 +90,7 @@ class UserListRequest(BaseModel):
     active: Optional[bool] = Field(None)
     educational_units_ids: Optional[list[UUID]] = Field(None)
     has_pending_validations: Optional[bool] = Field(None)
+    user_ids: Optional[list[UUID]] = Field(default_factory=list)
     page: int = Field(1, min=1)
     page_size: int = Field(0, min=1, max=100)
 

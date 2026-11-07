@@ -50,6 +50,7 @@ class UserRepository(BaseRepository[UserModel]):
         educational_units_ids: Optional[list[UUID]] = None,
         email_verified: Optional[bool] = None,
         has_pending_validations: Optional[bool] = None,
+        user_ids: Optional[list[UUID]] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[UserModel]:
@@ -89,6 +90,8 @@ class UserRepository(BaseRepository[UserModel]):
                 .exists()
             )
             conditions.append(pending_exists)
+        if user_ids:
+            conditions.append(UserModel.id.in_(user_ids))
         
         stmt = select(UserModel)
         if conditions:
@@ -110,7 +113,8 @@ class UserRepository(BaseRepository[UserModel]):
         active: Optional[bool] = None,
         educational_units_ids: Optional[list[UUID]] = None,
         email_verified: Optional[bool] = None,
-        has_pending_validations: Optional[bool] = None
+        has_pending_validations: Optional[bool] = None,
+        user_ids: Optional[list[UUID]] = None
     ) -> List[UserModel]:
         """Find users with multiple filters"""
         conditions = [UserModel.user_type_id != 1] # Never include administrators
@@ -148,6 +152,8 @@ class UserRepository(BaseRepository[UserModel]):
                 .exists()
             )
             conditions.append(pending_exists)
+        if user_ids:
+            conditions.append(UserModel.id.in_(user_ids))
         
         stmt = select(func.count()).select_from(UserModel)
         if conditions:
