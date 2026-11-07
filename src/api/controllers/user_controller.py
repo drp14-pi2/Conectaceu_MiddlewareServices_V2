@@ -103,7 +103,7 @@ async def create_user(
     if not await security_service.can_access_educational_unit(current_user.id, dto.educational_unit_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
@@ -127,7 +127,7 @@ async def deactivate_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2, 5]:
+    if current_user.user_type_id not in [1, 2, 5, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     # Validates if student user is deactivating their own account
@@ -168,7 +168,7 @@ async def activate_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
@@ -301,7 +301,7 @@ async def update_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id not in [1, 2, 6] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
