@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from src.data.models.user_gender_type_model import ClassAttendanceTypeModel
+from src.data.models.class_attendance_type_model import ClassAttendanceTypeModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class ClassAttendanceTypeRepository(BaseRepository):

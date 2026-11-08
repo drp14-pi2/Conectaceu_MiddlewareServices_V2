@@ -76,7 +76,7 @@ class DatabaseContext:
         self.enrollment_waiting_list = EnrollmentWaitingListRepository(self.session)
         self.email_validation_repository = EmailValidationRepository(self.session)
         self.educational_unit_repository = EducationalUnitRepository(self.session)
-        self.educational_unit_repository = ClassAttendanceTypeRepository(self.session)
+        self.class_attendance_type_repository = ClassAttendanceTypeRepository(self.session)
         
         # Log repositories
         self.log_accesses = LogAccessRepository(self.session)

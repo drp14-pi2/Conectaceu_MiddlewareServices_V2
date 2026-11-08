@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Integer, select, and_, func
+from sqlalchemy import Integer, select, and_, func, case
 
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -59,7 +59,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         """Get attendance summary for a class"""
         stmt = select(
             func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
+            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
         ).where(ClassAttendanceModel.class_id == class_id)
         
         result = await self.session.execute(stmt)
@@ -79,7 +79,8 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         """Get attendance summary for a user in a specific class"""
         stmt = select(
             func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
+            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
+            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
         ).where(
             and_(
                 ClassAttendanceModel.user_id == user_id,

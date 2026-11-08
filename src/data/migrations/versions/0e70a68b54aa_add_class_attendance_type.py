@@ -1,8 +1,8 @@
 """add_class_attendance_type
 
-Revision ID: 5c8f35d28b42
+Revision ID: 0e70a68b54aa
 Revises: bb0147370acb
-Create Date: 2026-11-07 16:52:40.753616
+Create Date: 2026-11-07 23:28:07.076673
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision: str = "5c8f35d28b42"
+revision: str = "0e70a68b54aa"
 down_revision: Union[str, Sequence[str], None] = "bb0147370acb"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

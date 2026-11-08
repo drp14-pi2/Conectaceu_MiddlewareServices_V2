@@ -1,5 +1,5 @@
 """Class attendance model"""
-from sqlalchemy import Column, Boolean, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey
 from src.data.db_context.base import UuidPkUpdatableBaseModel
 from src.data.db_context.types import UUIDBinary
 
