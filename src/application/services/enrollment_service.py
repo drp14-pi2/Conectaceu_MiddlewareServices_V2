@@ -107,7 +107,7 @@ class EnrollmentService(BaseService):
         try:
             validation: dict[str, Any] = await self._validate_bulk_enrollment(dto.course_id, dto.user_ids)
             
-            if not validation['valid']:
+            if validation['issues']:
                 return {
                     'success': False,
                     'course_id': dto.course_id,
@@ -291,8 +291,6 @@ class EnrollmentService(BaseService):
                         troubledEnrollments.append({'user_id': user_id, 'issue': str(e)})
                 except ValueError:
                     troubledEnrollments.append({'user_id': user_id, 'issue': 'Invalid user ID format'})
-
-            await self.repository.session.commit()
             
             return {
                 'course_id': course_id,

@@ -92,13 +92,16 @@ async def bulk_enroll(
     Bulk enroll users in a class.
     Admin (1), Secretary (2), Coordinator (3), Educator (4) only.
     """
-    if not await security_service.can_enroll_users(current_user.id, dto.user_ids, dto.course_id):
-        raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
-    
-    if current_user.user_type_id not in [1, 2, 3, 4]:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    return await service.bulk_enroll(dto)
+    try:
+        if not await security_service.can_enroll_users(current_user.id, dto.user_ids, dto.course_id):
+            raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
+        
+        if current_user.user_type_id not in [1, 2, 3, 4]:
+            raise HTTPException(status_code=403, detail="Não autorizado")
+        
+        return await service.bulk_enroll(dto)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/user/{user_id}", response_model=list[Enrollment])
 @limiter.limit("20/minute")
