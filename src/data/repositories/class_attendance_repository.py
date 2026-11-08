@@ -80,7 +80,6 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         stmt = select(
             func.count().label('total'),
             func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
-            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
         ).where(
             and_(
                 ClassAttendanceModel.user_id == user_id,
