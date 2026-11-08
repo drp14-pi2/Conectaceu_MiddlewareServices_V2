@@ -71,7 +71,7 @@ async def get_user_addresses(
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
     # Admin (1) and Secretary (2) can view any. Users can only view their own
-    if current_user.user_type_id in [1, 2] or current_user.id == user_id:
+    if current_user.user_type_id in [1, 2, 3, 6] or current_user.id == user_id:
         return await service.get_user_addresses(user_id)
     
     raise HTTPException(status_code=403, detail="Só pode ver seu próprio endereço")

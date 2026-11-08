@@ -106,7 +106,7 @@ async def get_user_documents(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
     
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id == 5 and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
     
     return await service.get_user_documents(user_id)
@@ -179,7 +179,7 @@ async def get_user_identity_document(
         if not documents:
             raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
         
-        if current_user.user_type_id not in [1, 2] and user_id != current_user.id:
+        if current_user.user_type_id == 5 and user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
         
         return documents
