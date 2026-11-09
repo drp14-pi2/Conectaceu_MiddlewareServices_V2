@@ -67,12 +67,12 @@ class DocumentService(BaseService):
             if existing_document:
                 saved_model = existing_document
                 existing_document.base64 = dto.base64
-                self.repository.update(existing_document)
+                await self.repository.update(existing_document)
 
                 if is_user_photo:
                     existing_student_card: DocumentModel = (await self.repository.get_by_type(
                         user.id,
-                        [STUDENT_PHOTO_DOC_TYPE_ID]
+                        [8] # student card
                     ))[0]
                     existing_student_card.base64 = await self._get_student_card_base64(user, dto.base64)
                     await self.repository.update(existing_student_card)
@@ -80,9 +80,10 @@ class DocumentService(BaseService):
                 saved_model = await self.repository.create(model)
 
                 if is_user_photo:
-                    self._create_student_card(user, dto.base64)
+                    await self._create_student_card(user, dto.base64)
 
-            self._create_pending_validation(model)
+                await self._create_pending_validation(model)
+
             await self.repository.session.commit()
 
             return DocumentMapper.model_to_schema(saved_model)
@@ -290,7 +291,7 @@ class DocumentService(BaseService):
             card_html = card_html.replace('${name}', user.name)
             card_html = card_html.replace('${document}', user.document)
             card_html = card_html.replace('${birthdate}', user.birthdate.strftime("%d/%m/%Y"))
-            card_html = card_html.replace('${studentPhotoBase64}', photo_base_64.base64)
+            card_html = card_html.replace('${studentPhotoBase64}', photo_base_64)
             user_address = (await self.address_repo.get_by_user_id(user.id))[0]
             card_html = card_html.replace(
                 '${userFullAddress}',
@@ -299,7 +300,13 @@ class DocumentService(BaseService):
             student_phone_number = user.cellphone_number if user.cellphone_number else ''
             card_html = card_html.replace('${userPhoneNumber}', FormatHandler.format_phone(student_phone_number))
 
-        return self._render_to_base64(card_html)
+        # print(card_html[:578492])
+        pdfBase64 = self._render_to_base64(card_html)
+        
+        if not pdfBase64.startswith('data:'):
+            pdfBase64 = f'data:application/pdf;base64,{pdfBase64}'
+
+        return pdfBase64
     
     async def _create_student_card(self, user: UserModel, photo_base_64: str) -> DocumentCreate:
         user_id: UUID = user.id

@@ -498,8 +498,13 @@ class UserService(BaseService):
 
         from src.infrastructure.pdf.pdf_render_service import PdfRenderService
 
+        pdfBase64 = PdfRenderService.render_to_base64(card_html)
+
+        if not pdfBase64.startswith('data:'):
+            pdfBase64 = f'data:application/pdf;base64,{pdfBase64}'
+
         return DocumentCreate(
-            base64=PdfRenderService.render_to_base64(card_html),
+            base64=pdfBase64,
             user_id=student_id,
             document_type_id=8,
             is_front=None,

@@ -155,7 +155,7 @@ async def get_document_by_type(
     if not documents:
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
-    if current_user.user_type_id not in [1, 2] and user_id != current_user.id:
+    if current_user.user_type_id == 5 and user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Só pode ver seus próprios documentos")
     
     return documents
@@ -209,7 +209,6 @@ async def get_management_document_template(
 
 # Document validation
 @router.put("/validate", response_model=DocumentValidation)
-@limiter.limit("5/minute")
 async def validate_document(
     request: Request,
     dto: DocumentValidationInput,

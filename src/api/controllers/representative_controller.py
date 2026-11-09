@@ -156,7 +156,7 @@ async def get_user_representatives(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
     
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id == 5 and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Só pode ver seus próprios representantes")
     
     return await service.get_user_representatives(user_id)
