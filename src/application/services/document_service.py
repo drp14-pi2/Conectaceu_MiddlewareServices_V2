@@ -221,7 +221,7 @@ class DocumentService(BaseService):
                     document_base64 = self._get_register_user_form_template()
                 case DocumentTypes.ATTENDANCE_LIST_TEMPLATE:
                     if not component_id:
-                        raise ValueError('ID Curso do curso inválido')
+                        raise ValueError('ID do componente inválido')
                     if not month or month <= 0 or month > 12:
                         raise ValueError('Mês inválido')
                     document_base64 = await self._get_attendance_list_template(component_id, month)
