@@ -118,6 +118,16 @@
             margin: auto;
             width: 60%;
         }
+
+        label {
+            display: block;
+        }
+
+        fieldset {
+            border: 0;
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body>
@@ -130,61 +140,73 @@
     <main>
         <div class="two_col_line">
             <div class="input">
-                <p class="label">Documento <span class="required">*</span></p>
+                <p class="label">E-mail</p>
                 <div class="document_line">
-                    <div class="document_type_box"></div>
-                    <div class="input_box"></div>
+                    <div class="input_box two_row_input_box">${email}</div>
                 </div>
             </div>
             <div class="input">
-                <p class="label">Nome completo <span class="required">*</span></p>
+                <p class="label">Documento <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
+                    <div class="document_type_box">${userDocumentType}</div>
+                    <div class="input_box">${userDocument}</div>
                 </div>
             </div>
         </div>
 
         <div class="two_col_line">
             <div class="input">
-                <p class="label">E-mail</p>
+                <p class="label">Nome completo <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
+                    <div class="input_box two_row_input_box">${userName}</div>
                 </div>
             </div>
             <div class="input">
                 <p class="label">Data de nascimento <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box">${birthdate}</div>
                 </div>
             </div>
         </div>
 
         <div class="two_col_line">
             <div class="input">
-                <p class="label">Contato</p>
+                <p class="label">Celular</p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box">${cellphone}</div>
                 </div>
             </div>
             <div class="input">
-                <p class="label">Contato 2</p>
+                <p class="label">Celular secundário</p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box">${cellphone2}</div>
                 </div>
             </div>
         </div>
 
         <div class="two_col_line">
-            <div class="input">
-                <p class="label">Gênero <span class="required">*</span></p>
-                <div class="document_line">
-                    <div class="input_box"></div>
-                </div>
-            </div>
             <div class="input">
                 <p class="label">Sexo <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <fieldset>
+                        ${sex}
+                        <label><input type="checkbox">Feminino</label>
+                        <label><input type="checkbox">Masculino</label>
+                    </fieldset>
+                </div>
+            </div>
+
+            <div class="input">
+                <p class="label">Gênero <span class="required">*</span></p>
+                <div class="document_line">
+                    <fieldset>
+                        ${gender}
+                        <label><input type="checkbox">Mulher</label>
+                        <label><input type="checkbox">Homem</label>
+                        <label><input type="checkbox">Não-binário</label>
+                        <label><input type="checkbox">Outro</label>
+                        <label><input type="checkbox">Prefiro não informar</label>
+                    </fieldset>
                 </div>
             </div>
         </div>
@@ -193,7 +215,7 @@
             <div class="input">
                 <p class="label">Escola</p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
+                    <div class="input_box two_row_input_box">${school}</div>
                 </div>
             </div>
         </div>
@@ -202,13 +224,13 @@
             <div class="input">
                 <p class="label">CEP <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box">${zipCode}</div>
                 </div>
             </div>
             <div class="input">
                 <p class="label">Logradouro <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
+                    <div class="input_box two_row_input_box">${street}</div>
                 </div>
             </div>
         </div>
@@ -217,13 +239,13 @@
             <div class="input">
                 <p class="label">Número <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box">${addressNumber}</div>
                 </div>
             </div>
             <div class="input">
                 <p class="label">Complemento</p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
+                    <div class="input_box two_row_input_box">${addressComplement}</div>
                 </div>
             </div>
         </div>
@@ -232,13 +254,7 @@
             <div class="input">
                 <p class="label">Bairro <span class="required">*</span></p>
                 <div class="document_line">
-                    <div class="input_box two_row_input_box"></div>
-                </div>
-            </div>
-            <div class="input">
-                <p class="label">Tipo de usuário <span class="required">*</span></p>
-                <div class="document_line">
-                    <div class="input_box"></div>
+                    <div class="input_box two_row_input_box">${neighborhood}</div>
                 </div>
             </div>
         </div>
@@ -249,13 +265,13 @@
                 <div class="input">
                     <p class="label">Nome completo <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="input_box two_row_input_box"></div>
+                        <div class="input_box two_row_input_box">${representative1Name}</div>
                     </div>
                 </div>
                 <div class="input">
                     <p class="label">Grau <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="input_box"></div>
+                        <div class="input_box">${representative1Degree}</div>
                     </div>
                 </div>
             </div>
@@ -263,8 +279,8 @@
                 <div class="input">
                     <p class="label">Documento <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="document_type_box"></div>
-                        <div class="input_box"></div>
+                        <div class="document_type_box">${representative1DocumentType}</div>
+                        <div class="input_box">${representative1Document}</div>
                     </div>
                 </div>
             </div>
@@ -276,13 +292,13 @@
                 <div class="input">
                     <p class="label">Nome completo <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="input_box two_row_input_box"></div>
+                        <div class="input_box two_row_input_box">${representative2Name}</div>
                     </div>
                 </div>
                 <div class="input">
                     <p class="label">Grau <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="input_box"></div>
+                        <div class="input_box">${representative2Degree}</div>
                     </div>
                 </div>
             </div>
@@ -290,8 +306,8 @@
                 <div class="input">
                     <p class="label">Documento <span class="required">*</span></p>
                     <div class="document_line">
-                        <div class="document_type_box"></div>
-                        <div class="input_box"></div>
+                        <div class="document_type_box">${representative2DocumentType}</div>
+                        <div class="input_box">${representative2Document}</div>
                     </div>
                 </div>
             </div>

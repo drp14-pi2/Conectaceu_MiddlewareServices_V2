@@ -1,5 +1,6 @@
 """Document service - business logic for Document entity"""
 from datetime import date
+import re
 from typing import List, Optional
 from uuid import UUID, uuid4
 
@@ -230,6 +231,9 @@ class DocumentService(BaseService):
             random_code: str = str(uuid4()).replace('-', '')
             fileName: str = f'arquivo_{random_code}.pdf'
 
+            if not document_base64.startswith('data'):
+                document_base64 = f'data:application/pdf;base64,{document_base64}'
+
             return {
                 'fileName': fileName,
                 'base64': document_base64
@@ -331,8 +335,17 @@ class DocumentService(BaseService):
     # Register user form template
     def _get_register_user_form_template(self) -> str:
         "Get the register user form template"
+        html = ''
         with open('src/templates/docs/register_user_form_template.html', 'r', encoding='utf-8') as f:
-            return self._render_to_base64(f.read())
+            html = f.read()
+
+        def strip_placeholders(text: str) -> str:
+            """'Hello ${name}' -> 'Hello '"""
+            return re.sub(r'\$\{[^}]*\}', '', text)
+        
+        html = strip_placeholders(html)
+        
+        return self._render_to_base64(html)
     
     # Attendance list template
     def _generate_attendance_list_day_wrappers(self, classes_in_month: list[ClassModel]) -> str:
