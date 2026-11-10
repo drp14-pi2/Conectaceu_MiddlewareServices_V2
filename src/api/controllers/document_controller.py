@@ -14,10 +14,14 @@ from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
+from src.data.repositories.document_type_repository import DocumentTypeRepository
 from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
+from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
+from src.data.repositories.user_gender_type_repository import UserGenderTypeRepository
 from src.data.repositories.user_repository import UserRepository
+from src.data.repositories.user_sex_type_repository import UserSexTypeRepository
 from src.domain.schemas.document import Document, DocumentCreate
 from src.domain.schemas.document_validation import DocumentValidation, DocumentValidationInput
 from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
@@ -36,8 +40,23 @@ def get_document_service(db: AsyncSession = Depends(get_db)) -> DocumentService:
     user_repo = UserRepository(db)
     address_repo = AddressRepository(db)
     log_doc_request_repo = LogDocumentRequestRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+    sex_type_repo = UserSexTypeRepository(db)
+    gender_type_repo = UserGenderTypeRepository(db)
+    degree_repo = LegalRepresentativeDegreeRepository(db)
+    document_type_repo = DocumentTypeRepository(db)
 
-    return DocumentService(repository, user_repo, address_repo, log_doc_request_repo)
+    return DocumentService(
+        repository,
+        user_repo,
+        address_repo,
+        log_doc_request_repo,
+        representative_repo,
+        sex_type_repo,
+        gender_type_repo,
+        degree_repo,
+        document_type_repo
+    )
 
 def get_validation_service(db: AsyncSession = Depends(get_db)) -> DocumentValidationService:
     """Dependency injection for DocumentValidationService"""
@@ -206,6 +225,22 @@ async def get_management_document_template(
         raise HTTPException(status_code=404, detail="Nenhum documento encontrado")
     
     return document
+
+@router.get("/user/{user_id}/subcription/form", response_model=dict)
+@limiter.limit("20/minute")
+async def get_management_document_template(
+    request: Request,
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: DocumentService = Depends(get_document_service)
+):
+    """Get a management document template"""
+    if current_user.user_type_id == 5:
+        raise HTTPException(status_code=403, detail="Só equipe pode consultar estes documentos")
+    
+    base64_pdf: str = await service.get_user_subscription_form(user_id)
+
+    return {"base64": base64_pdf, "mime_type": "application/pdf"}
 
 # Document validation
 @router.put("/validate", response_model=DocumentValidation)

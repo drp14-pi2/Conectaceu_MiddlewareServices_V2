@@ -14,13 +14,19 @@ from src.data.models.user_model import UserModel
 from src.data.repositories.address_repository import AddressRepository
 from src.data.repositories.document_repository import DocumentRepository
 from src.application.services.base_service import BaseService
+from src.data.repositories.document_type_repository import DocumentTypeRepository
+from src.data.repositories.legal_representative_degree_repository import LegalRepresentativeDegreeRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
+from src.data.repositories.user_gender_type_repository import UserGenderTypeRepository
 from src.data.repositories.user_repository import UserRepository
+from src.data.repositories.user_sex_type_repository import UserSexTypeRepository
 from src.domain.constants.document_types import DocumentTypes
 from src.domain.schemas.document import Document, DocumentCreate
 from src.infrastructure.configuration.settings import settings
 from src.infrastructure.handlers.datetime_handler import DateTimeHandler
 from src.infrastructure.handlers.format_handler import FormatHandler
 from src.data.repositories.log_document_request_repository import LogDocumentRequestRepository
+from src.infrastructure.pdf.pdf_render_service import PdfRenderService
 
 class DocumentService(BaseService):
     """Service for Document business logic"""
@@ -30,13 +36,23 @@ class DocumentService(BaseService):
         repository: DocumentRepository,
         user_repo: UserRepository,
         address_repo: AddressRepository,
-        log_doc_request_repo: LogDocumentRequestRepository
+        log_doc_request_repo: LogDocumentRequestRepository,
+        representative_repo: LegalRepresentativeRepository,
+        sex_type_repo: UserSexTypeRepository,
+        gender_type_repo: UserGenderTypeRepository,
+        degree_repo: LegalRepresentativeDegreeRepository,
+        document_type_repo: DocumentTypeRepository
     ):
         super().__init__(repository, 'document', mapper_class=DocumentMapper)
         self.repository = repository
         self.user_repo = user_repo
         self.address_repo = address_repo
         self.log_doc_request_repo = log_doc_request_repo
+        self.representative_repo = representative_repo
+        self.sex_type_repo = sex_type_repo
+        self.gender_type_repo = gender_type_repo
+        self.degree_repo = degree_repo
+        self.document_type_repo = document_type_repo
     
     async def upload_document(self, dto: DocumentCreate) -> Document:
         """Upload a new document"""
@@ -256,7 +272,120 @@ class DocumentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
+    async def get_user_subscription_form(self, user_id: UUID) -> str:
+        """Returns base64-encoded PDF of the registration form for an existing user"""
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise ValueError("Usuário não encontrado")
+
+        addresses = await self.address_repo.get_by_user_id(user_id)
+        address = addresses[0] if addresses else None
+
+        representatives = await self.representative_repo.get_by_user_id(user_id)
+        rep1 = representatives[0] if len(representatives) > 0 else None
+        rep2 = representatives[1] if len(representatives) > 1 else None
+
+        sex = await self.sex_type_repo.get_by_id_int(user.sex_id)
+        gender = await self.gender_type_repo.get_by_id_int(user.gender_id)
+
+        values = {
+            "email": user.email or "",
+            "userDocumentType": "CPF",
+            "userDocument": self._format_document(user.document),
+            "userName": user.name,
+            "birthdate": user.birthdate.strftime("%d/%m/%Y"),
+            "cellphone": self._format_phone(user.cellphone_number),
+            "cellphone2": self._format_phone(user.contact_cellphone_number),
+            "sexOptions": self._render_checkbox_group(
+                ["Feminino", "Masculino"],
+                sex.description if sex else None,
+            ),
+            "genderOptions": self._render_checkbox_group(
+                ["Mulher", "Homem", "Não-binário", "Outro", "Prefiro não informar"],
+                gender.description if gender else None,
+            ),
+            "school": user.school or "",
+            "zipCode": self._format_zip(address.zip_code) if address else "",
+            "street": address.street if address else "",
+            "addressNumber": address.number if address else "",
+            "addressComplement": (address.complement or "") if address else "",
+            "neighborhood": address.neighborhood if address else "",
+            **await self._representative_values(1, rep1),
+            **await self._representative_values(2, rep2),
+        }
+
+        with open("src/templates/docs/user_subscription_form_template.html", "r", encoding="utf-8") as f:
+            html = f.read()
+
+        html = self._replace_placeholders(html, values)
+        html = self._strip_placeholders(html)
+        base64 = PdfRenderService.render_to_base64(html)
+
+        if not base64.startswith('data'):
+            base64 = f"data:application/pdf;base64,{base64}"
+
+        return base64
+
     # Private methods
+    async def _representative_values(self, n: int, rep) -> dict:
+        if not rep:
+            return {
+                f"representative{n}Name": "",
+                f"representative{n}Degree": "",
+                f"representative{n}DocumentType": "",
+                f"representative{n}Document": "",
+            }
+        degree = await self.degree_repo.get_by_id_int(rep.legal_representative_degree_id)
+        return {
+            f"representative{n}Name": rep.name,
+            f"representative{n}Degree": degree.description if degree else "",
+            f"representative{n}DocumentType": "CPF",
+            f"representative{n}Document": self._format_document(rep.document),
+        }
+
+    def _replace_placeholders(self, html: str, values: dict) -> str:
+        import re
+
+        def replacer(match):
+            key = match.group(1)
+            return str(values[key]) if key in values else match.group(0)
+
+        return re.sub(r"\$\{([^}]*)\}", replacer, html)
+
+    def _strip_placeholders(self, text: str) -> str:
+        return re.sub(r'\$\{[^}]*\}', '', text)
+
+    def _render_checkbox_group(self, options: list[str], selected: str | None) -> str:
+        return "".join(
+            f'<label><input type="checkbox"{" checked" if o == selected else ""}>{o}</label>\n'
+            for o in options
+        )
+
+    @staticmethod
+    def _format_document(document: str | None) -> str:
+        if not document:
+            return ""
+        d = "".join(filter(str.isdigit, document))
+        return f"{d[:3]}.{d[3:6]}.{d[6:9]}-{d[9:]}" if len(d) == 11 else document
+
+    @staticmethod
+    def _format_phone(phone: str | None) -> str:
+        if not phone:
+            return ""
+        d = "".join(filter(str.isdigit, phone))
+        if len(d) == 11:
+            return f"({d[:2]}) {d[2:7]}-{d[7:]}"
+        if len(d) == 10:
+            return f"({d[:2]}) {d[2:6]}-{d[6:]}"
+        return phone
+
+    @staticmethod
+    def _format_zip(zip_code: str | None) -> str:
+        if not zip_code:
+            return ""
+        d = "".join(filter(str.isdigit, zip_code))
+        return f"{d[:5]}-{d[5:]}" if len(d) == 8 else zip_code
+
     async def _create_pending_validation(self, document: DocumentModel) -> None:
         """Create pending validation for secretary review"""
         from uuid import uuid4
@@ -338,12 +467,8 @@ class DocumentService(BaseService):
         html = ''
         with open('src/templates/docs/register_user_form_template.html', 'r', encoding='utf-8') as f:
             html = f.read()
-
-        def strip_placeholders(text: str) -> str:
-            """'Hello ${name}' -> 'Hello '"""
-            return re.sub(r'\$\{[^}]*\}', '', text)
         
-        html = strip_placeholders(html)
+        html = self._strip_placeholders(html)
         
         return self._render_to_base64(html)
     
