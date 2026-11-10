@@ -114,3 +114,22 @@ async def get_course_vacancies(
         educational_unit_id=educational_unit_id,
         user_ip_address=user_ip
     )
+
+@router.get("/user/{user_id}/enrollments")
+@limiter.limit("10/minute")
+async def get_user_courses_pdf(
+    request: Request,
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ReportService = Depends(get_report_service)
+):
+    """PDF listing a user's courses, components and classes"""
+    if current_user.user_type_id == 5 and current_user.id != user_id:
+        raise HTTPException(403, "Não autorizado")
+
+    try:
+        base64_pdf = await service.render_user_courses_pdf(user_id)
+
+        return {"base64": base64_pdf, "mime_type": "application/pdf"}
+    except ValueError as e:
+        raise HTTPException(404, str(e))

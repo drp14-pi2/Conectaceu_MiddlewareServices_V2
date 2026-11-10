@@ -16,7 +16,7 @@ class ClassRepository(BaseRepository[ClassModel]):
     
     async def get_by_component_id(self, component_id: UUID) -> List[ClassModel]:
         """Get all classes for a component"""
-        stmt = select(ClassModel).where(ClassModel.course_component_id == component_id)
+        stmt = select(ClassModel).where(ClassModel.course_component_id == component_id).order_by(ClassModel.date)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     

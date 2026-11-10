@@ -15,6 +15,9 @@ from src.data.repositories.log_report_request_repository import LogReportRequest
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.user_repository import UserRepository
+from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+WEEKDAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
 class ReportService:
     """Service for generating reports"""
@@ -168,7 +171,79 @@ class ReportService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
+    async def render_user_courses_pdf(self, user_id: UUID) -> str:
+        try:
+            user = await self.user_repo.get_by_id(user_id)
+            if not user:
+                raise ValueError("Usuário não encontrado")
+
+            enrollments = await self.enrollment_repo.get_active_by_user_id(user_id)
+
+            rows_html = ""
+            for enrollment in enrollments:
+                course = await self.course_repo.get_by_id(enrollment.course_id)
+                if not course:
+                    continue
+
+                components = await self.component_repo.get_by_course_id(course.id)
+
+                for component in components:
+                    classes = await self.class_repo.get_by_component_id(component.id)
+                    period = self._format_component_range(classes)
+
+                    rows_html += (
+                        "<tr>"
+                        f"<td>{course.name}</td>"
+                        f"<td>{component.name}</td>"
+                        f"<td>{period}</td>"
+                        "</tr>"
+                    )
+
+            with open("src/templates/docs/user_courses_report.html", "r", encoding="utf-8") as f:
+                html = f.read()
+
+            html = html.replace("${userName}", user.name)
+            html = html.replace(
+                "${rows}",
+                rows_html or '<tr><td colspan="3">Nenhum curso encontrado</td></tr>',
+            )
+
+            base64 = PdfRenderService.render_to_base64(html)
+
+            if not base64.startswith('data'):
+                base64 = f'data:application/pdf;base64,{base64}'
+
+            return base64
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+
     # Private methods
+    def _format_component_range(self, classes: List[ClassModel]) -> str:
+        """Format a component's classes as first–last dates + weekdays"""
+        if not classes:
+            return "Sem aulas cadastradas"
+
+        dates = sorted(c.date for c in classes)
+        first, last = dates[0], dates[-1]
+
+        weekdays = sorted({WEEKDAYS[d.weekday()] for d in dates})
+        days_text = ", ".join(weekdays)
+
+        if first.date() == last.date():
+            return f"{first.strftime('%d/%m/%Y')} ({days_text})"
+
+        return f"{first.strftime('%d/%m/%Y')} a {last.strftime('%d/%m/%Y')} ({days_text})"
+
+    def _format_class(self, class_model) -> str:
+        start = class_model.date.strftime("%d/%m/%Y")
+        weekday = WEEKDAYS[class_model.date.weekday()]
+        end = getattr(class_model, "end_date", None)
+        end_str = end.strftime("%d/%m/%Y") if end else "—"
+        return f"{start} a {end_str} ({weekday})"
+
+    def _format_classes(self, classes: List) -> str:
+        return ", ".join(self._format_class(c) for c in classes)
+
     def _get_occupation_rate(self, total_enrolled: int, total_seat_limit: int) -> decimal:
         occupation_rate: int = 0
 
