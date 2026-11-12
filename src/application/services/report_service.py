@@ -41,7 +41,6 @@ class ReportService:
     async def get_students_by_course(
         self,
         course_id: Optional[UUID] = None,
-        component_id: Optional[UUID] = None,
         educational_unit_id: Optional[UUID] = None,
         requested_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
@@ -77,16 +76,6 @@ class ReportService:
             for course in courses:
                 course_uuid: UUID = course.id
                 enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_course_id(course_uuid)
-                components: List[CourseComponentModel] = []
-                
-                # Get all components for this course
-                if component_id:
-                    component: CourseComponentModel | None = await self.component_repo.get_by_id(component_id)
-
-                    if component:
-                        components.append(component)
-                else:
-                    components = await self.component_repo.get_by_course_id(course_uuid)
                 
                 for enrollment in enrollments:
                     user_uuid: UUID = enrollment.user_id
@@ -95,26 +84,15 @@ class ReportService:
                     if not user:
                         continue
                     
-                    # For each component, get the classes and check attendance
-                    for component in components:
-                        component_uuid: UUID = component.id
-                        classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_uuid)
-                        
-                        for class_ in classes:
-                            class_uuid = class_.id
-                            report_data.append({
-                                'course_id': str(course_uuid),
-                                'course_name': course.name,
-                                'component_id': str(component_uuid),
-                                'component_name': component.name,
-                                'class_id': str(class_uuid),
-                                'shift_type_id': course.shift_type_id,
-                                'student_name': user.name,
-                                'student_document': user.document,
-                                'student_email': user.email,
-                                'student_phone': user.cellphone_number,
-                                'student_type_id': user.user_type_id
-                            })
+                    report_data.append({
+                        'course_id': str(course_uuid),
+                        'course_name': course.name,
+                        'shift_type_id': course.shift_type_id,
+                        'student_name': user.name,
+                        'student_document': user.document,
+                        'student_email': user.email,
+                        'student_phone': user.cellphone_number
+                    })
 
             return report_data
         except Exception as e:

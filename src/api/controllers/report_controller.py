@@ -69,7 +69,6 @@ def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
 async def get_students_by_course(
     request: Request,
     course_id: Optional[UUID] = Query(None),
-    component_id: Optional[UUID] = Query(None),
     educational_unit_id: Optional[UUID] = Query(None),
     current_user: User = Depends(get_current_active_user),
     service: ReportService = Depends(get_report_service),
@@ -86,7 +85,6 @@ async def get_students_by_course(
 
     return await service.get_students_by_course(
         course_id=course_id,
-        component_id=component_id,
         educational_unit_id=educational_unit_id,
         requested_by_user_id=current_user.id,
         user_ip_address=user_ip
@@ -103,6 +101,9 @@ async def get_course_vacancies(
     security_service: SecurityService = Depends(get_security_service)
 ):
     """Get vacancies by course"""
+    if current_user.user_type_id != 1 and not educational_unit_id:
+        raise HTTPException(status_code=403, detail='ID do polo é obrigatório')
+    
     if educational_unit_id and not await security_service.can_access_educational_unit(current_user.id, educational_unit_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
     
