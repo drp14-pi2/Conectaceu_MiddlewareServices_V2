@@ -46,7 +46,9 @@ def upgrade() -> None:
             {'id': 8, 'description': 'Carteirinha'},
             {'id': 9, 'description': 'Template ficha de cadastro'},
             {'id': 10, 'description': 'Template atestado de saúde'},
-            {'id': 11, 'description': 'Template lista de presença'}
+            {'id': 11, 'description': 'Template lista de presença'},
+            {'id': 12, 'description': 'Grade curricular'},
+            {'id': 13, 'description': 'Ficha de inscrição do usuário'}
         ]
     )
 
