@@ -84,19 +84,17 @@ async def send_broadcast(
     Requires: send_broadcast_message permission (Admin/Secretary only).
     """
     try:
-        if current_user.user_type_id not in [1, 2]:
+        if current_user.user_type_id not in [1, 2, 3]:
             raise HTTPException(status_code=403, detail="Não autorizado")
         
         user_ip: str = request.client.host if request.client else "unknown"
         
-        if current_user.user_type_id == 2:
+        if current_user.user_type_id in [2, 3]:
             if any(unit_id != current_user.educational_unit_id for unit_id in dto.educational_units_ids):
                 raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
             if dto.recipient_user_ids and not await security_service.can_access_other_users(current_user.id, dto.recipient_user_ids):
                 raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
-
-            return await service.send_broadcast(dto, current_user.id, user_ip)
 
         return await service.send_broadcast(dto, current_user.id, user_ip)
     except ValueError as e:
