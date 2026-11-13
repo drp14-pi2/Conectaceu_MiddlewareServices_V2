@@ -48,6 +48,8 @@ class ReportService:
         """
         Get students enrolled by course and/or component.
         """
+        SHIFT_TYPES = ['Manhã', 'Tarde', 'Noite']
+
         try:
             if requested_by_user_id:
                 await self.log_report_repo.log(
@@ -87,7 +89,7 @@ class ReportService:
                     report_data.append({
                         'course_id': str(course_uuid),
                         'course_name': course.name,
-                        'shift_type_id': course.shift_type_id,
+                        'shift_type_name': SHIFT_TYPES[course.shift_type_id - 1],
                         'student_name': user.name,
                         'student_document': user.document,
                         'student_email': user.email,
