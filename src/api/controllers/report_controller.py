@@ -30,7 +30,7 @@ router = APIRouter(
 
 STUDENTS_COLUMNS = {
     "course_name": "Curso",
-    "shift_type_id": "Turno",
+    "shift_type_name": "Turno",
     "student_name": "Aluno",
     "student_document": "Documento",
     "student_phone": "Celular",
