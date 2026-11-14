@@ -177,7 +177,7 @@ class AuthService:
                 )
                 await self.user_repo.session.commit()
             # User inactive
-            elif user.active:
+            elif not user.active:
                 return { 'success': False, 'message': 'Usuário não encontrado' }
 
             access_token: str = await self.create_access_token(user_uuid, user.user_type_id, user.educational_unit_id)
