@@ -209,7 +209,7 @@ class ClassAttendanceService(BaseService):
             raise ValueError("Esta chamada não pertence a você")
         
         # Verify if the student was present
-        if attendance.attended:
+        if attendance.class_attendance_type_id == 1:
             raise ValueError("Não é possível justificar uma chamada já com presença")
         
         # Check if justification already exists

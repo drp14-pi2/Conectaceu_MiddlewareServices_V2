@@ -154,7 +154,7 @@ async def get_user_classes(
         page_size=page_size
     )
 
-@router.post("{attendance_id}/justify/user/{user_id}")
+@router.post("/{attendance_id}/justify/user/{user_id}")
 @limiter.limit("10/minute")
 async def submit_absence_justification(
     request: Request,
