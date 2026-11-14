@@ -228,15 +228,17 @@ async def get_management_document_template(
 
 @router.get("/user/{user_id}/subcription/form", response_model=dict)
 @limiter.limit("20/minute")
-async def get_management_document_template(
+async def get_user_subscription_form(
     request: Request,
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     service: DocumentService = Depends(get_document_service)
 ):
     """Get a management document template"""
-    if current_user.user_type_id == 5:
-        raise HTTPException(status_code=403, detail="Só equipe pode consultar estes documentos")
+    if (
+        current_user.user_type_id == 5 and user_id != current_user.id
+        ) or current_user.user_type_id not in [1, 2, 5, 6]:
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
     base64_pdf: str = await service.get_user_subscription_form(user_id)
 
