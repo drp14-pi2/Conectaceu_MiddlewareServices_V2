@@ -118,8 +118,8 @@ class AuthService:
             # Find user by document
             user: UserModel | None = await self.user_repo.get_by_document(body.document)
 
-            # Is user valid
-            if not user or not user.active:
+            # User not found
+            if not user:
                 return { 'success': False, 'message': 'Usuário não encontrado' }
             
             # Verify password
@@ -176,6 +176,9 @@ class AuthService:
                     performed_by_user_ip_address="self_login"
                 )
                 await self.user_repo.session.commit()
+            # User inactive
+            elif user.active:
+                return { 'success': False, 'message': 'Usuário não encontrado' }
 
             access_token: str = await self.create_access_token(user_uuid, user.user_type_id, user.educational_unit_id)
             refresh_token: str = await self.create_refresh_token(user_uuid)
