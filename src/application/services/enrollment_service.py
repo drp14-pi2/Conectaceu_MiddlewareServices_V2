@@ -44,6 +44,11 @@ class EnrollmentService(BaseService):
         
         try:
             user_id: UUID = dto.user_id
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user or not user.active or user.user_type_id != 5:
+                raise ValueError('Usuário inválido')
+
             course_id: UUID = dto.course_id
             course: CourseModel | None = await self.course_repo.get_by_id(course_id)
 
