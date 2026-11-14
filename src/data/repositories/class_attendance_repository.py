@@ -75,12 +75,9 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             'attendance_rate': (present / total * 100) if total > 0 else 0
         }
     
-    async def get_user_attendance_summary(self, user_id: UUID, class_id: UUID) -> dict:
+    async def get_user_attendance(self, user_id: UUID, class_id: UUID) -> dict:
         """Get attendance summary for a user in a specific class"""
-        stmt = select(
-            func.count().label('total'),
-            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
-        ).where(
+        stmt = select(ClassAttendanceModel).where(
             and_(
                 ClassAttendanceModel.user_id == user_id,
                 ClassAttendanceModel.class_id == class_id
@@ -88,14 +85,5 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         )
         
         result = await self.session.execute(stmt)
-        row = result.first()
         
-        total = row.total or 0
-        present = row.present or 0
-        
-        return {
-            'total_classes': total,
-            'attended': present,
-            'missed': total - present,
-            'attendance_rate': (present / total * 100) if total > 0 else 0
-        }
+        return result.scalar_one_or_none()

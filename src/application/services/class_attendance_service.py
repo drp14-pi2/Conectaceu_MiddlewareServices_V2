@@ -121,7 +121,7 @@ class ClassAttendanceService(BaseService):
     async def get_user_class_attendance(self, user_id: UUID, class_id: UUID) -> dict[str, Any]:
         """Get attendance summary for a user in a class"""
         try:
-            return await self.repository.get_user_attendance_summary(user_id, class_id)
+            return await self.repository.get_user_attendance(user_id, class_id)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
