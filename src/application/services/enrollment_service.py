@@ -193,7 +193,7 @@ class EnrollmentService(BaseService):
         """Get user's active enrollments with course and shift details"""
         try:
             enrollments_with_details: List[dict[str, Any]] = []
-            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id, active=True)
 
             for enrollment in active_enrollments:
                 course: CourseModel | None = await self.course_repo.get_by_id(enrollment.course_id)
@@ -336,7 +336,7 @@ class EnrollmentService(BaseService):
                 raise ValueError('Idade do usuário é superior ao permitido para esse curso')
             
             # Get user's active enrollments
-            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id, active=True)
             
             # Maximum 3 of enrollments
             if len(active_enrollments) >= self._get_maximum_enrollments_count():

@@ -157,7 +157,7 @@ class ReportService:
             if not user:
                 raise ValueError("Usuário não encontrado")
 
-            enrollments = await self.enrollment_repo.get_active_by_user_id(user_id)
+            enrollments = await self.enrollment_repo.get_active_by_user_id(user_id, active=True)
 
             rows_html = ""
             for enrollment in enrollments:

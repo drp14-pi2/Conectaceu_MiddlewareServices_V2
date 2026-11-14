@@ -148,7 +148,7 @@ class ClassAttendanceService(BaseService):
             Dict with paginated class list
         """
         try:
-            enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_user_id(user_id)
+            enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_user_id(user_id, active=True)
             all_classes: List[dict[str, Any]] = []
             
             for enrollment in enrollments:
