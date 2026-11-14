@@ -19,11 +19,11 @@ class EnrollmentRepository(BaseRepository[EnrollmentModel]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def get_active_by_user_id(self, user_id: UUID) -> List[EnrollmentModel]:
+    async def get_active_by_user_id(self, user_id: UUID, active: bool) -> List[EnrollmentModel]:
         """Get active enrollments for a user"""
         stmt = select(EnrollmentModel).where(
             EnrollmentModel.user_id == user_id,
-            EnrollmentModel.active == True
+            EnrollmentModel.active == active
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

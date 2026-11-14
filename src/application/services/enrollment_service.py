@@ -176,10 +176,14 @@ class EnrollmentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_enrollments(self, user_id: UUID) -> List[Enrollment]:
+    async def get_user_enrollments(
+        self,
+        user_id: UUID,
+        active: Optional[bool] = None
+    ) -> List[Enrollment]:
         """Get all enrollments for a user"""
         try:
-            models = await self.repository.get_by_user_id(user_id)
+            models = await self.repository.get_by_user_id(user_id) if active is None else await self.repository.get_active_by_user_id(user_id, active)
 
             return [EnrollmentMapper.model_to_schema(model) for model in models]
         except Exception as e:

@@ -1,7 +1,7 @@
 """User course enrollment controller"""
-from typing import List
+from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, Request, HTTPException, status
+from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.services.enrollment_service import EnrollmentService
@@ -108,6 +108,7 @@ async def bulk_enroll(
 async def get_user_enrollments(
     request: Request,
     user_id: UUID,
+    active: Optional[bool] = Query(None),
     current_user: User = Depends(get_current_active_user),
     service: EnrollmentService = Depends(get_enrollment_service),
     security_service: SecurityService = Depends(get_security_service)
@@ -123,7 +124,7 @@ async def get_user_enrollments(
     if current_user.user_type_id not in [1, 2, 3, 4] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    return await service.get_user_enrollments(user_id)
+    return await service.get_user_enrollments(user_id, active)
 
 @router.get("/user/{user_id}/summary")
 @limiter.limit("20/minute")
