@@ -178,3 +178,17 @@ async def submit_absence_justification(
         return await service.submit_absence_justification(attendance_id, document, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/{attendance_id}/justification/status")
+@limiter.limit("30/minute")
+async def get_justification_status(
+    request: Request,
+    attendance_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    service: ClassAttendanceService = Depends(get_attendance_service),
+):
+    """Check whether an absence has a non-rejected justification."""
+    try:
+        return await service.get_justification_status(attendance_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

@@ -3,6 +3,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.data.models.student_absence_justification_model import StudentAbsenceJustificationModel
+from src.data.models.document_model import DocumentModel
+from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.repositories.base.base_repository import BaseRepository
 
 class StudentAbsenceJustificationRepository(BaseRepository):
@@ -23,3 +25,20 @@ class StudentAbsenceJustificationRepository(BaseRepository):
         ).where(ClassAttendanceModel.user_id == user_id).offset(skip).limit(limit)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_justification_status(self, attendance_id: UUID) -> Optional[int]:
+        """
+        Returns the document_validation_status_type_id for the justification
+        linked to this attendance, or:
+          - None  → no justification, or justification has no document
+        """
+        stmt = (
+            select(DocumentValidationModel.document_validation_status_type_id)
+            .select_from(StudentAbsenceJustificationModel)
+            .join(DocumentModel, DocumentModel.id == StudentAbsenceJustificationModel.document_id)
+            .join(DocumentValidationModel, DocumentValidationModel.document_id == DocumentModel.id)
+            .where(StudentAbsenceJustificationModel.class_attendance_id == attendance_id)
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

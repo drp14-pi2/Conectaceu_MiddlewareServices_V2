@@ -232,6 +232,20 @@ class ClassAttendanceService(BaseService):
             "document_id": str(document_id)
         }
 
+    async def get_justification_status(self, attendance_id: UUID) -> dict[str, Any]:
+        """Check whether an absence has a justification and its validation status."""
+        attendance = await self.repository.get_by_id(attendance_id)
+
+        if not attendance:
+            raise ValueError("Chamada não encontrada")
+
+        status_id: int | None = await self.absence_justification_repo.get_justification_status(attendance_id)
+
+        return {
+            "attendance_id": attendance_id,
+            "status": status_id
+        }
+
     # Private methods
     async def _create_document(self, document: DocumentCreate) -> DocumentModel:
         from src.application.mappers.document_mapper import DocumentMapper
