@@ -47,12 +47,12 @@ class DocumentRepository(BaseRepository):
     async def get_by_type(
         self,
         user_id: UUID,
-        document_type_id: int
+        document_type_id: list[int],
     ) -> List[DocumentModel]:
-        """Get documents of specific type for a user"""
+        """Get documents of specific types for a user"""
         stmt = select(DocumentModel).where(
             DocumentModel.user_id == user_id,
-            DocumentModel.document_type_id == document_type_id
+            DocumentModel.document_type_id.in_(document_type_id),
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

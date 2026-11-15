@@ -13,6 +13,7 @@ from src.data.repositories.class_repository import ClassRepository
 from src.data.repositories.course_component_repository import CourseComponentRepository
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
@@ -22,7 +23,7 @@ from src.data.repositories.email_validation_repository import EmailValidationRep
 from src.data.repositories.educational_unit_repository import EducationalUnitRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
-from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserList, UserUpdate
+from src.domain.schemas.user import DeactivateUser, User, UserCreate, UserListRequest, UserListResponse, UserUpdate
 from src.domain.schemas.user_password_history import PasswordChange
 from src.infrastructure.messaging.email.email_service import EmailService
 from src.api.middleware.rate_limiter import limiter
@@ -40,12 +41,18 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     password_history_service = UserPasswordHistoryService(password_history_repo)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
     educational_unit_repo = EducationalUnitRepository(db)
+    document_depo = DocumentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+    doc_validation_repo = DocumentValidationRepository(db)
 
     return UserService(
         user_repo,
         password_history_service,
         profiles_to_exclude_repo,
-        educational_unit_repo
+        educational_unit_repo,
+        document_depo,
+        representative_repo,
+        doc_validation_repo
     )
 
 def get_email_validation_service(db: AsyncSession = Depends(get_db)) -> EmailValidationService:
@@ -96,7 +103,7 @@ async def create_user(
     if not await security_service.can_access_educational_unit(current_user.id, dto.educational_unit_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
@@ -120,7 +127,7 @@ async def deactivate_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2, 5]:
+    if current_user.user_type_id not in [1, 2, 5, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     # Validates if student user is deactivating their own account
@@ -161,7 +168,7 @@ async def activate_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2]:
+    if current_user.user_type_id not in [1, 2, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:
@@ -177,11 +184,11 @@ async def activate_user(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/list", response_model=List[User])
-@limiter.limit("20/minute")
+@router.post("/list", response_model=UserListResponse)
+@limiter.limit("50/minute")
 async def list_users(
     request: Request,
-    dto: UserList,
+    dto: UserListRequest,
     current_user: User = Depends(get_current_active_user),
     service: UserService = Depends(get_user_service),
     security_service: SecurityService = Depends(get_security_service)
@@ -197,29 +204,53 @@ async def list_users(
         elif any(unit_id != current_user.educational_unit_id for unit_id in dto.educational_units_ids):
             raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    # Admins and Secretaries can list all users
-    if current_user.user_type_id in [1, 2]:
+    # Admins, Secretaries and Managers can list all users
+    if current_user.user_type_id in [1, 2, 6]:
         return await service.find_users(
             name=dto.name,
             document=dto.document,
             email=dto.email,
-            phoneNumber=dto.phoneNumber,
+            phone_number=dto.phone_number,
             user_type_id=dto.user_type_id,
             active=dto.active,
             educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
+            user_ids=dto.user_ids,
+            page=dto.page,
+            page_size=dto.page_size
+        )
+    
+    if current_user.user_type_id == 3:
+        if dto.user_type_id not in [4, 5]:
+            raise HTTPException(status_code=403, detail='Coordenadores só podem listar educadores e estudantes')
+
+        return await service.find_users(
+            name=dto.name,
+            document=dto.document,
+            email=dto.email,
+            phone_number=dto.phone_number,
+            user_type_id=dto.user_type_id,
+            active=dto.active,
+            educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
             page=dto.page,
             page_size=dto.page_size
         )
     
     # Coordinators and Educators can only list students
-    if current_user.user_type_id in [3, 4]:
+    if current_user.user_type_id == 4:
+        if dto.user_type_id != 5:
+            raise HTTPException(status_code=403, detail='Educadores só podem listar estudantes')
+        
         return await service.find_users(
             name=dto.name,
             document=dto.document,
             email=dto.email,
-            phoneNumber=dto.phoneNumber,
-            user_type_id=5, # Students only
+            phone_number=dto.phone_number,
+            user_type_id=dto.user_type_id,
             active=dto.active,
+            educational_units_ids=dto.educational_units_ids,
+            has_pending_validations=dto.has_pending_validations,
             page=dto.page,
             page_size=dto.page_size
         )
@@ -244,11 +275,23 @@ async def get_user(
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
     user: User | None = await service.get_by_id(user_id)
+    
+    if current_user.user_type_id == 5 and current_user.id != user_id:
+        if user.user_type_id == 4:
+            user.document = '00000000000'
+        else:
+            raise HTTPException(status_code=403, detail="Não autorizado")
 
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id == 6 and user.user_type_id == 1:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if current_user.user_type_id == 2 and user.user_type_id in [1, 6]:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if current_user.user_type_id == 3 and user.user_type_id in [1, 2, 6]:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     return user
@@ -271,7 +314,7 @@ async def update_user(
     if not await security_service.can_access_other_user(current_user.id, user_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    if current_user.user_type_id not in [1, 2] and current_user.id != user_id:
+    if current_user.user_type_id not in [1, 2, 6] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     try:

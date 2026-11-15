@@ -30,8 +30,9 @@ def get_course_service(db: AsyncSession = Depends(get_db)) -> CourseService:
     course_repo = CourseRepository(db)
     component_repo = CourseComponentRepository(db)
     educational_unit_repo = EducationalUnitRepository(db)
+    user_repo = UserRepository(db)
 
-    return CourseService(course_repo, component_repo, educational_unit_repo)
+    return CourseService(course_repo, component_repo, educational_unit_repo, user_repo)
 
 def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
     """Dependency injection for SecurityService"""
@@ -53,7 +54,7 @@ def get_security_service(db: AsyncSession = Depends(get_db)) -> SecurityService:
         representative_repo
     )
 
-@router.post("/", response_model=Course, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=CourseList, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def create_course(
     request: Request,

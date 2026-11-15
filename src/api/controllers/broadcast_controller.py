@@ -96,8 +96,6 @@ async def send_broadcast(
             if dto.recipient_user_ids and not await security_service.can_access_other_users(current_user.id, dto.recipient_user_ids):
                 raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-            return await service.send_broadcast(dto, current_user.id, user_ip)
-
         return await service.send_broadcast(dto, current_user.id, user_ip)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

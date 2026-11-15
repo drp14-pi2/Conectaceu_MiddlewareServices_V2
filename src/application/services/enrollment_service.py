@@ -44,6 +44,11 @@ class EnrollmentService(BaseService):
         
         try:
             user_id: UUID = dto.user_id
+            user: UserModel | None = await self.user_repo.get_by_id(user_id)
+
+            if not user or not user.active or user.user_type_id != 5:
+                raise ValueError('Usuário inválido')
+
             course_id: UUID = dto.course_id
             course: CourseModel | None = await self.course_repo.get_by_id(course_id)
 
@@ -107,7 +112,7 @@ class EnrollmentService(BaseService):
         try:
             validation: dict[str, Any] = await self._validate_bulk_enrollment(dto.course_id, dto.user_ids)
             
-            if not validation['valid']:
+            if validation['issues']:
                 return {
                     'success': False,
                     'course_id': dto.course_id,
@@ -176,10 +181,14 @@ class EnrollmentService(BaseService):
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
-    async def get_user_enrollments(self, user_id: UUID) -> List[Enrollment]:
+    async def get_user_enrollments(
+        self,
+        user_id: UUID,
+        active: Optional[bool] = None
+    ) -> List[Enrollment]:
         """Get all enrollments for a user"""
         try:
-            models = await self.repository.get_by_user_id(user_id)
+            models = await self.repository.get_by_user_id(user_id) if active is None else await self.repository.get_active_by_user_id(user_id, active)
 
             return [EnrollmentMapper.model_to_schema(model) for model in models]
         except Exception as e:
@@ -189,7 +198,7 @@ class EnrollmentService(BaseService):
         """Get user's active enrollments with course and shift details"""
         try:
             enrollments_with_details: List[dict[str, Any]] = []
-            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id, active=True)
 
             for enrollment in active_enrollments:
                 course: CourseModel | None = await self.course_repo.get_by_id(enrollment.course_id)
@@ -291,8 +300,6 @@ class EnrollmentService(BaseService):
                         troubledEnrollments.append({'user_id': user_id, 'issue': str(e)})
                 except ValueError:
                     troubledEnrollments.append({'user_id': user_id, 'issue': 'Invalid user ID format'})
-
-            await self.repository.session.commit()
             
             return {
                 'course_id': course_id,
@@ -334,7 +341,7 @@ class EnrollmentService(BaseService):
                 raise ValueError('Idade do usuário é superior ao permitido para esse curso')
             
             # Get user's active enrollments
-            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id)
+            active_enrollments: List[EnrollmentModel] = await self.repository.get_active_by_user_id(user_id, active=True)
             
             # Maximum 3 of enrollments
             if len(active_enrollments) >= self._get_maximum_enrollments_count():

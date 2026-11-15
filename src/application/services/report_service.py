@@ -15,6 +15,9 @@ from src.data.repositories.log_report_request_repository import LogReportRequest
 from src.data.repositories.course_repository import CourseRepository
 from src.data.repositories.enrollment_repository import EnrollmentRepository
 from src.data.repositories.user_repository import UserRepository
+from src.infrastructure.pdf.pdf_render_service import PdfRenderService
+
+WEEKDAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
 class ReportService:
     """Service for generating reports"""
@@ -38,7 +41,6 @@ class ReportService:
     async def get_students_by_course(
         self,
         course_id: Optional[UUID] = None,
-        component_id: Optional[UUID] = None,
         educational_unit_id: Optional[UUID] = None,
         requested_by_user_id: Optional[UUID] = None,
         user_ip_address: Optional[str] = None
@@ -46,6 +48,8 @@ class ReportService:
         """
         Get students enrolled by course and/or component.
         """
+        SHIFT_TYPES = ['Manhã', 'Tarde', 'Noite']
+
         try:
             if requested_by_user_id:
                 await self.log_report_repo.log(
@@ -74,16 +78,6 @@ class ReportService:
             for course in courses:
                 course_uuid: UUID = course.id
                 enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_course_id(course_uuid)
-                components: List[CourseComponentModel] = []
-                
-                # Get all components for this course
-                if component_id:
-                    component: CourseComponentModel | None = await self.component_repo.get_by_id(component_id)
-
-                    if component:
-                        components.append(component)
-                else:
-                    components = await self.component_repo.get_by_course_id(course_uuid)
                 
                 for enrollment in enrollments:
                     user_uuid: UUID = enrollment.user_id
@@ -92,26 +86,15 @@ class ReportService:
                     if not user:
                         continue
                     
-                    # For each component, get the classes and check attendance
-                    for component in components:
-                        component_uuid: UUID = component.id
-                        classes: List[ClassModel] = await self.class_repo.get_by_component_id(component_uuid)
-                        
-                        for class_ in classes:
-                            class_uuid = class_.id
-                            report_data.append({
-                                'course_id': str(course_uuid),
-                                'course_name': course.name,
-                                'component_id': str(component_uuid),
-                                'component_name': component.name,
-                                'class_id': str(class_uuid),
-                                'shift_type_id': course.shift_type_id,
-                                'student_name': user.name,
-                                'student_document': user.document,
-                                'student_email': user.email,
-                                'student_phone': user.cellphone_number,
-                                'student_type_id': user.user_type_id
-                            })
+                    report_data.append({
+                        'course_id': str(course_uuid),
+                        'course_name': course.name,
+                        'shift_type_name': SHIFT_TYPES[course.shift_type_id - 1],
+                        'student_name': user.name,
+                        'student_document': user.document,
+                        'student_email': user.email,
+                        'student_phone': user.cellphone_number
+                    })
 
             return report_data
         except Exception as e:
@@ -168,7 +151,79 @@ class ReportService:
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
 
+    async def render_user_courses_pdf(self, user_id: UUID) -> str:
+        try:
+            user = await self.user_repo.get_by_id(user_id)
+            if not user:
+                raise ValueError("Usuário não encontrado")
+
+            enrollments = await self.enrollment_repo.get_active_by_user_id(user_id, active=True)
+
+            rows_html = ""
+            for enrollment in enrollments:
+                course = await self.course_repo.get_by_id(enrollment.course_id)
+                if not course:
+                    continue
+
+                components = await self.component_repo.get_by_course_id(course.id)
+
+                for component in components:
+                    classes = await self.class_repo.get_by_component_id(component.id)
+                    period = self._format_component_range(classes)
+
+                    rows_html += (
+                        "<tr>"
+                        f"<td>{course.name}</td>"
+                        f"<td>{component.name}</td>"
+                        f"<td>{period}</td>"
+                        "</tr>"
+                    )
+
+            with open("src/templates/docs/user_courses_report.html", "r", encoding="utf-8") as f:
+                html = f.read()
+
+            html = html.replace("${userName}", user.name)
+            html = html.replace(
+                "${rows}",
+                rows_html or '<tr><td colspan="3">Nenhum curso encontrado</td></tr>',
+            )
+
+            base64 = PdfRenderService.render_to_base64(html)
+
+            if not base64.startswith('data'):
+                base64 = f'data:application/pdf;base64,{base64}'
+
+            return base64
+        except Exception as e:
+            await ApplicationLogger.log_error(e, reraise=True)
+
     # Private methods
+    def _format_component_range(self, classes: List[ClassModel]) -> str:
+        """Format a component's classes as first–last dates + weekdays"""
+        if not classes:
+            return "Sem aulas cadastradas"
+
+        dates = sorted(c.date for c in classes)
+        first, last = dates[0], dates[-1]
+
+        weekdays = sorted({WEEKDAYS[d.weekday()] for d in dates})
+        days_text = ", ".join(weekdays)
+
+        if first.date() == last.date():
+            return f"{first.strftime('%d/%m/%Y')} ({days_text})"
+
+        return f"{first.strftime('%d/%m/%Y')} a {last.strftime('%d/%m/%Y')} ({days_text})"
+
+    def _format_class(self, class_model) -> str:
+        start = class_model.date.strftime("%d/%m/%Y")
+        weekday = WEEKDAYS[class_model.date.weekday()]
+        end = getattr(class_model, "end_date", None)
+        end_str = end.strftime("%d/%m/%Y") if end else "—"
+        return f"{start} a {end_str} ({weekday})"
+
+    def _format_classes(self, classes: List) -> str:
+        return ", ".join(self._format_class(c) for c in classes)
+
     def _get_occupation_rate(self, total_enrolled: int, total_seat_limit: int) -> decimal:
         occupation_rate: int = 0
 

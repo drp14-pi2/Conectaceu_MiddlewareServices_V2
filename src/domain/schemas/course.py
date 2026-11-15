@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
-from src.domain.schemas.course_component import CourseComponent
+from src.domain.schemas.course_component import CourseComponent, CourseComponentCreate
 
 class CourseBase(BaseModel):
     name: str = Field(min_length=3, max_length=100)
@@ -17,6 +17,7 @@ class CourseCreate(CourseBase):
     responsible_educator_1: UUID
     responsible_educator_2: Optional[UUID] = None
     educational_unit_id: UUID
+    components: Optional[list[CourseComponentCreate]] = None
 
 class Course(CourseBase):
     id: UUID

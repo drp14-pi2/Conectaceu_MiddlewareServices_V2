@@ -46,7 +46,9 @@ def upgrade() -> None:
             {'id': 8, 'description': 'Carteirinha'},
             {'id': 9, 'description': 'Template ficha de cadastro'},
             {'id': 10, 'description': 'Template atestado de saúde'},
-            {'id': 11, 'description': 'Template lista de presença'}
+            {'id': 11, 'description': 'Template lista de presença'},
+            {'id': 12, 'description': 'Grade curricular'},
+            {'id': 13, 'description': 'Ficha de inscrição do usuário'}
         ]
     )
 
@@ -96,6 +98,16 @@ def upgrade() -> None:
     op.bulk_insert(
         sa.table('report_type', sa.column('id', sa.Integer), sa.column('description', sa.String)),
         [{'id': 1, 'description': 'Alunos matriculados por curso'}, {'id': 2, 'description': 'Vagas por curso'}]
+    )
+
+    # ========== class_attendance_type ==========
+    op.bulk_insert(
+        sa.table('class_attendance_type', sa.column('id', sa.Integer), sa.column('description', sa.String)),
+        [
+            {'id': 1, 'description': 'Presente'},
+            {'id': 2, 'description': 'Em outro grupo'},
+            {'id': 2, 'description': 'Falta'}
+        ]
     )
 
 

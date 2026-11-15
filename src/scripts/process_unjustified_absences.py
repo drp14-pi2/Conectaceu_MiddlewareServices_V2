@@ -80,7 +80,7 @@ async def stream_users_with_unjustified_absences() -> AsyncGenerator[tuple[UserM
                     .where(
                         and_(
                             UserModel.active == True,
-                            ClassAttendanceModel.attended == False,
+                            ClassAttendanceModel.class_attendance_type_id == 3,
                             ClassModel.date < cutoff_date
                         )
                     )

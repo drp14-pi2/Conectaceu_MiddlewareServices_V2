@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
         # Test database connection
         async with engine.connect() as conn:
             from sqlalchemy import text
-            result = conn.execute(text("SELECT 1"))
+            await conn.execute(text("SELECT 1"))
             print(f"{DateTimeHandler.now()} | Database connection successful")
     except Exception as e:
         print(f"{DateTimeHandler.now()} | Database connection failed: {e}")
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     print(f"{DateTimeHandler.now()} | Shutting down...")
     
     # Dispose of database engine
-    engine.dispose()
+    await engine.dispose()
     print(f"{DateTimeHandler.now()} | Database connections closed")
 
 

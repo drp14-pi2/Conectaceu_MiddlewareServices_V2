@@ -1,5 +1,5 @@
 """Reference data controller for lookup tables"""
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.mappers.reference_mapper import ReferenceMapper
@@ -14,6 +14,7 @@ from src.data.repositories.report_type_repository import ReportTypeRepository
 from src.data.db_context.database import get_db
 from src.api.dependencies.auth_dependencies import get_current_active_user
 from src.api.middleware.rate_limiter import limiter
+from src.domain.schemas.user import User
 
 router = APIRouter(
     prefix="/reference",
@@ -55,9 +56,14 @@ async def get_gender_types(
 @limiter.limit("20/minute")
 async def get_user_types(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all user types"""
+    # Student can't list
+    if current_user.user_type_id == 5:
+        raise HTTPException(status_code=403, detail='Não autorizado')
+    
     repo = UserTypeRepository(db)
     models = await repo.get_all()
     result = [ReferenceMapper.user_type_model_to_schema(m) for m in models]
@@ -85,7 +91,8 @@ async def get_legal_representative_degrees(
 @limiter.limit("20/minute")
 async def get_document_types(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all document types"""
     repo = DocumentTypeRepository(db)
@@ -100,7 +107,8 @@ async def get_document_types(
 @limiter.limit("20/minute")
 async def get_validation_status_types(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all validation status types"""
     repo = DocumentValidationStatusTypeRepository(db)
@@ -115,7 +123,8 @@ async def get_validation_status_types(
 @limiter.limit("20/minute")
 async def get_shift_types(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all shift types"""
     repo = ShiftTypeRepository(db)
@@ -130,7 +139,8 @@ async def get_shift_types(
 @limiter.limit("20/minute")
 async def get_report_types(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all report types"""
     repo = ReportTypeRepository(db)

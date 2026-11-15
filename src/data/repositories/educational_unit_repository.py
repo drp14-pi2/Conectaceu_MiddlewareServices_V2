@@ -46,7 +46,7 @@ class EducationalUnitRepository(BaseRepository[EducationalUnitModel]):
         stmt = select(EducationalUnitModel)
 
         if conditions:
-            stmt = stmt.where(conditions)
+            stmt = stmt.where(and_(*conditions))
 
         result = await self.session.execute(stmt)
         

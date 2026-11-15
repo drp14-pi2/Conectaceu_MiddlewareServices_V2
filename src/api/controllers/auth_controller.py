@@ -7,6 +7,9 @@ from fastapi.security import HTTPBearer
 from src.application.services.auth_service import AuthService
 from src.application.services.user_password_history_service import UserPasswordHistoryService
 from src.application.services.user_service import UserService
+from src.data.repositories.document_repository import DocumentRepository
+from src.data.repositories.document_validation_repository import DocumentValidationRepository
+from src.data.repositories.legal_representative_repository import LegalRepresentativeRepository
 from src.data.repositories.log_access_repository import LogAccessRepository
 from src.data.repositories.profiles_to_exclude_repository import ProfilesToExcludeRepository
 from src.data.repositories.user_password_history_repository import UserPasswordHistoryRepository
@@ -16,7 +19,7 @@ from src.data.db_context.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.middleware.rate_limiter import limiter
 
-from src.domain.schemas.auth import Login
+from src.domain.schemas.auth import Login, RefreshToken
 from src.domain.schemas.user import User, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -36,12 +39,18 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
     password_history_service = UserPasswordHistoryService(password_history_repo)
     profiles_to_exclude_repo = ProfilesToExcludeRepository(db)
     educational_unit_repo = EducationalUnitRepository(db)
+    document_depo = DocumentRepository(db)
+    representative_repo = LegalRepresentativeRepository(db)
+    doc_validation_repo = DocumentValidationRepository(db)
 
     return UserService(
         user_repo,
         password_history_service,
         profiles_to_exclude_repo,
-        educational_unit_repo
+        educational_unit_repo,
+        document_depo,
+        representative_repo,
+        doc_validation_repo
     )
 
 @router.post("/login")
@@ -71,11 +80,11 @@ async def login(
 @limiter.limit("5/minute")
 async def refresh_token(
     request: Request,
-    refresh_token: str,
+    dto: RefreshToken,
     service: AuthService = Depends(get_auth_service)
 ):
     """Refresh access token"""
-    result: dict[str, Any] | None = await service.refresh_access_token(refresh_token)
+    result: dict[str, Any] | None = await service.refresh_access_token(dto.refresh_token)
     
     if not result:
         raise HTTPException(
@@ -97,6 +106,7 @@ async def public_register(
     Documents need validation by a Secretary.
     """
     try:
+        dto.user_type_id = 5 # Force student for public registration
         user: User = await service.create_user(
             dto,
             created_by_user_id=None  # Public registration

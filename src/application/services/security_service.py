@@ -186,7 +186,7 @@ class SecurityService():
         try:
             attendees_ids: list[UUID] = [entry.user_id for entry in attendance_entries]
             
-            return self.can_access_course(creator_id, course_id) and self.are_users_in_educational_unit(creator_id, attendees_ids)
+            return await self.can_access_course(creator_id, course_id) and await self.are_users_in_educational_unit(creator_id, attendees_ids)
         except Exception as e:
             await ApplicationLogger.log_error(e)
 
@@ -219,7 +219,7 @@ class SecurityService():
 
     async def can_enroll_users(self, creator_id: UUID, students_ids: list[UUID], course_id: UUID) -> bool:
         try:
-            return self.can_access_other_users(creator_id, students_ids) and self.can_access_course(creator_id, course_id)
+            return await self.can_access_other_users(creator_id, students_ids) and await self.can_access_course(creator_id, course_id)
         except Exception as e:
             await ApplicationLogger.log_error(e)
 

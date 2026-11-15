@@ -2,8 +2,10 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import exists, func, select, and_
 
+from src.data.models.document_model import DocumentModel
+from src.data.models.document_validation_model import DocumentValidationModel
 from src.data.models.user_model import UserModel
 from src.data.repositories.base.base_repository import BaseRepository
 
@@ -40,13 +42,15 @@ class UserRepository(BaseRepository[UserModel]):
         name: Optional[str] = None,
         document: Optional[str] = None,
         email: Optional[str] = None,
-        phoneNumber: Optional[str] = None,
+        phone_number: Optional[str] = None,
         user_type_id: Optional[int] = None,
         sex_id: Optional[int] = None,
         gender_id: Optional[int] = None,
         active: Optional[bool] = None,
         educational_units_ids: Optional[list[UUID]] = None,
         email_verified: Optional[bool] = None,
+        has_pending_validations: Optional[bool] = None,
+        user_ids: Optional[list[UUID]] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[UserModel]:
@@ -59,8 +63,8 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.document == document)
         if email:
             conditions.append(UserModel.email == email)
-        if phoneNumber:
-            conditions.append(UserModel.cellphone_number == phoneNumber)
+        if phone_number:
+            conditions.append(UserModel.cellphone_number == phone_number)
         if user_type_id:
             conditions.append(UserModel.user_type_id == user_type_id)
         if sex_id:
@@ -73,6 +77,21 @@ class UserRepository(BaseRepository[UserModel]):
             conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
         if email_verified is not None:
             conditions.append(UserModel.email_verified == email_verified)
+        if has_pending_validations is not None:
+            pending_exists = (
+                select(1)
+                .select_from(DocumentModel)
+                .join(DocumentValidationModel, DocumentValidationModel.document_id == DocumentModel.id)
+                .where(
+                    DocumentModel.user_id == UserModel.id,
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                )
+                .correlate(UserModel)
+                .exists()
+            )
+            conditions.append(pending_exists)
+        if user_ids:
+            conditions.append(UserModel.id.in_(user_ids))
         
         stmt = select(UserModel)
         if conditions:
@@ -81,6 +100,67 @@ class UserRepository(BaseRepository[UserModel]):
         
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+    
+    async def count_by_filters(
+        self,
+        name: Optional[str] = None,
+        document: Optional[str] = None,
+        email: Optional[str] = None,
+        phone_number: Optional[str] = None,
+        user_type_id: Optional[int] = None,
+        sex_id: Optional[int] = None,
+        gender_id: Optional[int] = None,
+        active: Optional[bool] = None,
+        educational_units_ids: Optional[list[UUID]] = None,
+        email_verified: Optional[bool] = None,
+        has_pending_validations: Optional[bool] = None,
+        user_ids: Optional[list[UUID]] = None
+    ) -> List[UserModel]:
+        """Find users with multiple filters"""
+        conditions = [UserModel.user_type_id != 1] # Never include administrators
+        
+        if name:
+            conditions.append(UserModel.name.contains(name))
+        if document:
+            conditions.append(UserModel.document == document)
+        if email:
+            conditions.append(UserModel.email == email)
+        if phone_number:
+            conditions.append(UserModel.cellphone_number == phone_number)
+        if user_type_id:
+            conditions.append(UserModel.user_type_id == user_type_id)
+        if sex_id:
+            conditions.append(UserModel.sex_id == sex_id)
+        if gender_id:
+            conditions.append(UserModel.gender_id == gender_id)
+        if active is not None:
+            conditions.append(UserModel.active == active)
+        if educational_units_ids:
+            conditions.append(UserModel.educational_unit_id.in_(educational_units_ids))
+        if email_verified is not None:
+            conditions.append(UserModel.email_verified == email_verified)
+        if has_pending_validations is not None:
+            pending_exists = (
+                select(1)
+                .select_from(DocumentModel)
+                .join(DocumentValidationModel, DocumentValidationModel.document_id == DocumentModel.id)
+                .where(
+                    DocumentModel.user_id == UserModel.id,
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                )
+                .correlate(UserModel)
+                .exists()
+            )
+            conditions.append(pending_exists)
+        if user_ids:
+            conditions.append(UserModel.id.in_(user_ids))
+        
+        stmt = select(func.count()).select_from(UserModel)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        
+        result = await self.session.execute(stmt)
+        return result.scalar()
     
     async def deactivate(self, user_id: UUID) -> bool:
         """Soft delete - deactivate user"""

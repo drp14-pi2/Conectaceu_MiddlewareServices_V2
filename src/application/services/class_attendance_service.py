@@ -77,7 +77,7 @@ class ClassAttendanceService(BaseService):
             existing_attendance: ClassAttendanceModel | None  = await self.repository.get_by_user_and_class(user_id, class_id)
             
             if existing_attendance:
-                existing_attendance.attended = entry.attended
+                existing_attendance.attended = entry.class_attendance_type_id
                 await self.repository.update(existing_attendance)
                 updated += 1
             else:
@@ -85,7 +85,7 @@ class ClassAttendanceService(BaseService):
                     id=uuid4(),
                     created_at=DateTimeHandler.now(),
                     updated_at=None,
-                    attended=entry.attended,
+                    class_attendance_type_id=entry.class_attendance_type_id,
                     user_id=user_id,
                     class_id=class_id
                 )
@@ -121,7 +121,7 @@ class ClassAttendanceService(BaseService):
     async def get_user_class_attendance(self, user_id: UUID, class_id: UUID) -> dict[str, Any]:
         """Get attendance summary for a user in a class"""
         try:
-            return await self.repository.get_user_attendance_summary(user_id, class_id)
+            return await self.repository.get_user_attendance(user_id, class_id)
         except Exception as e:
             await ApplicationLogger.log_error(e, reraise=True)
     
@@ -148,7 +148,7 @@ class ClassAttendanceService(BaseService):
             Dict with paginated class list
         """
         try:
-            enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_user_id(user_id)
+            enrollments: List[EnrollmentModel] = await self.enrollment_repo.get_active_by_user_id(user_id, active=True)
             all_classes: List[dict[str, Any]] = []
             
             for enrollment in enrollments:
@@ -209,7 +209,7 @@ class ClassAttendanceService(BaseService):
             raise ValueError("Esta chamada não pertence a você")
         
         # Verify if the student was present
-        if attendance.attended:
+        if attendance.class_attendance_type_id == 1:
             raise ValueError("Não é possível justificar uma chamada já com presença")
         
         # Check if justification already exists

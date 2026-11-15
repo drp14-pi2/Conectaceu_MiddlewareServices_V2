@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import and_, select
 
 from src.data.models.document_model import DocumentModel
 from src.data.models.document_validation_model import DocumentValidationModel
@@ -16,9 +16,12 @@ class DocumentValidationRepository(BaseRepository):
         super().__init__(session, DocumentValidationModel)
     
     async def get_by_document_id(self, document_id: UUID) -> Optional[DocumentValidationModel]:
-        """Get validation by document ID"""
-        stmt = select(DocumentValidationModel).where(
-            DocumentValidationModel.document_id == document_id
+        """Get the most recent validation for a document"""
+        stmt = (
+            select(DocumentValidationModel)
+            .where(DocumentValidationModel.document_id == document_id)
+            .order_by(DocumentValidationModel.created_at.desc())
+            .limit(1)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -37,24 +40,34 @@ class DocumentValidationRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_pending_validations(
-        self,
-        educational_unit_id: Optional[UUID] = None,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[DocumentValidationModel]:
+    async def get_pending_validations(self, user_id: UUID) -> List[DocumentValidationModel]:
         """Get all validations for documents that belong to a user"""
-        conditions = [DocumentValidationModel.document_validation_status_type_id == 1]
+        stmt = (
+            select(DocumentValidationModel)
+            .join(DocumentModel, DocumentValidationModel.document_id == DocumentModel.id)
+            .where(
+                and_(
+                    DocumentModel.user_id == user_id,
+                    DocumentValidationModel.document_validation_status_type_id == 1
+                )
+            )
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
-        if educational_unit_id:
-            conditions.append(UserModel.educational_unit_id == educational_unit_id)
-
+    async def get_user_pending_validations(self, user_id: UUID) -> List[DocumentValidationModel]:
+        """Get all validations for documents that belong to a user"""
         stmt = (
             select(DocumentValidationModel)
             .join(DocumentModel, DocumentValidationModel.document_id == DocumentModel.id)
             .join(UserModel, DocumentModel.user_id == UserModel.id)
-            .where(conditions)
-        ).offset(skip).limit(limit)
+            .where(
+                and_(
+                    DocumentValidationModel.document_validation_status_type_id == 1,
+                    UserModel.id == user_id
+                )
+            )
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     

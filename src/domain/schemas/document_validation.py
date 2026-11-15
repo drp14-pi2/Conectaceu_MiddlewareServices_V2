@@ -8,7 +8,7 @@ from src.domain.schemas.document import Document
 class DocumentValidationInput(BaseModel):
     document_id: UUID
     document_validation_status_type_id: int = Field(ge=1, le=3)
-    rejection_reason: Optional[str] = Field(None, max_length=500)
+    rejection_reason: Optional[str] = Field(None, min_length=10, max_length=500)
 
 class DocumentValidation(BaseModel):
     id: UUID

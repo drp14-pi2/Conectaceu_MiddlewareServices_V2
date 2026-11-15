@@ -72,3 +72,11 @@ class LegalRepresentativeDegreeBase(BaseModel):
 class LegalRepresentativeDegree(LegalRepresentativeDegreeBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+# ClassAttendanceType
+class ClassAttendanceTypeBase(BaseModel):
+    description: str = Field(min_length=3, max_length=50)
+
+class ClassAttendanceType(ClassAttendanceTypeBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)

@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import re
 
 from src.domain.schemas.address import AddressCreate
+from src.domain.schemas.document import DocumentCreate
+from src.domain.schemas.legal_representative import LegalRepresentativeCreate
 
 class UserBase(BaseModel):
     document: str = Field(min_length=11, max_length=11)
@@ -28,8 +30,20 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     user_type_id: int
     password: str = Field(min_length=8, max_length=128)
-    address: AddressCreate
     educational_unit_id: UUID
+    
+    # Uploaded documents
+    id_document_front: DocumentCreate
+    id_document_back: DocumentCreate
+    user_photo: DocumentCreate
+    health_certificate: Optional[DocumentCreate] = Field(None)
+
+    # Address
+    address: AddressCreate
+
+    # Legal representatives
+    legal_representative_1: Optional[LegalRepresentativeCreate] = Field(None)
+    legal_representative_2: Optional[LegalRepresentativeCreate] = Field(None)
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=3, max_length=200)
@@ -39,6 +53,7 @@ class UserUpdate(BaseModel):
     school: Optional[str] = Field(None, max_length=200)
     sex_id: Optional[int] = None
     gender_id: Optional[int] = None
+    educational_unit_id: Optional[UUID] = None
 
 class User(UserBase):
     id: UUID
@@ -66,18 +81,24 @@ class User(UserBase):
     def is_over_70(self) -> bool:
         return self.age > 70
 
-class UserList(BaseModel):
+class UserListRequest(BaseModel):
     name: Optional[str] = Field(None)
     document: Optional[str] = Field(None)
     email: Optional[str] = Field(None)
-    phoneNumber: Optional[str] = Field(None)
+    phone_number: Optional[str] = Field(None)
     user_type_id: Optional[int] = Field(None)
     active: Optional[bool] = Field(None)
     educational_units_ids: Optional[list[UUID]] = Field(None)
-    page: int = Field(0, min_length=1)
-    page_size: int = Field(0, min_length=1, max_length=100),
+    has_pending_validations: Optional[bool] = Field(None)
+    user_ids: Optional[list[UUID]] = Field(default_factory=list)
+    page: int = Field(1, min=1)
+    page_size: int = Field(0, min=1, max=100)
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserListResponse(BaseModel):
+    total: int = Field(0)
+    users: list[User] = Field(default_factory=list)
 
 class UserDetail(User):
     """User with additional data for student listing"""

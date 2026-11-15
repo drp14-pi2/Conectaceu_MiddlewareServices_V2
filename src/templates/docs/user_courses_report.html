@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { font-family: Arial, sans-serif; font-size: 11px; }
+        h1 { font-size: 16px; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #444; padding: 6px; text-align: left; vertical-align: top; }
+        th { background: #eee; }
+        .course { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Cursos de ${userName}</h1>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%">Curso</th>
+                <th style="width: 20%">Componente</th>
+                <th style="width: 60%">Aulas</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rows}
+        </tbody>
+    </table>
+</body>
+</html>

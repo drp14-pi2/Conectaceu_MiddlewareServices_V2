@@ -2,7 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Integer, select, and_, func
+from sqlalchemy import Integer, select, and_, func, case
 
 from src.data.models.class_attendance_model import ClassAttendanceModel
 from src.data.repositories.base.base_repository import BaseRepository
@@ -59,7 +59,7 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         """Get attendance summary for a class"""
         stmt = select(
             func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
+            func.sum(case((ClassAttendanceModel.class_attendance_type_id == 1, 1), else_=0)).label("present")
         ).where(ClassAttendanceModel.class_id == class_id)
         
         result = await self.session.execute(stmt)
@@ -75,12 +75,9 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
             'attendance_rate': (present / total * 100) if total > 0 else 0
         }
     
-    async def get_user_attendance_summary(self, user_id: UUID, class_id: UUID) -> dict:
+    async def get_user_attendance(self, user_id: UUID, class_id: UUID) -> dict:
         """Get attendance summary for a user in a specific class"""
-        stmt = select(
-            func.count().label('total'),
-            func.sum(ClassAttendanceModel.attended.cast(Integer)).label('present')
-        ).where(
+        stmt = select(ClassAttendanceModel).where(
             and_(
                 ClassAttendanceModel.user_id == user_id,
                 ClassAttendanceModel.class_id == class_id
@@ -88,14 +85,5 @@ class ClassAttendanceRepository(BaseRepository[ClassAttendanceModel]):
         )
         
         result = await self.session.execute(stmt)
-        row = result.first()
         
-        total = row.total or 0
-        present = row.present or 0
-        
-        return {
-            'total_classes': total,
-            'attended': present,
-            'missed': total - present,
-            'attendance_rate': (present / total * 100) if total > 0 else 0
-        }
+        return result.scalar_one_or_none()

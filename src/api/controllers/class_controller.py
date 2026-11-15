@@ -119,7 +119,7 @@ async def activate_class(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/", response_model=List[Class])
+@router.post("/list", response_model=List[Class])
 @limiter.limit("20/minute")
 async def list_classes(
     request: Request,
@@ -132,7 +132,10 @@ async def list_classes(
     if not await security_service.can_access_component(current_user.id, dto.component_id):
         raise HTTPException(status_code=403, detail="Só pode interagir com seu próprio polo")
 
-    return await service.find_classes(dto)
+    classes: List[Class] = await service.find_classes(dto)
+    classes.sort(key=lambda c: c.date)
+
+    return classes
 
 @router.get("/{class_id}", response_model=Class)
 @limiter.limit("20/minute")
