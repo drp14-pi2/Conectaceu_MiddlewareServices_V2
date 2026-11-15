@@ -180,7 +180,7 @@ async def get_document_by_type(
     return documents
 
 @router.get("/user/{user_id}/identity/type", response_model=list[Document])
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def get_user_identity_document(
     request: Request,
     user_id: UUID,
